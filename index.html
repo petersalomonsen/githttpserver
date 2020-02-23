@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <h1>GIT in the browser</h1>
+        <a href="https://github.com/petersalomonsen/wasm-git">https://github.com/petersalomonsen/wasm-git</a><br />
+        <p>Open the web console to see git console messages</p>
+
+        <p>
+            Below you can see the contents of the file named "test.txt". And you can also modify it, type a commit message and 
+            make a commit and push changes.
+        </p>
+        <p>
+            You can also try cloning the repository locally:
+        </p>
+        <p><div id="gitrepourl" style="background-color: #eee; padding: 5px; width: 100%"></div></p>
+        <b>Latest test text file contents</b><br />
+        <textarea id="testtextfilecontents" style="width: 100%; height: 200px;" ></textarea>
+        <br />
+        <br />
+        <b>Commit message</b><br />
+        <input style="width: 300px" id="commitmessageinput" value="textfile changes"/><br />
+        <button onclick="commitAndPush()">Commit and push changes</button>
+        <h4>Log</h4>
+        <pre id="logviewer"></pre>
+        <script>
+            const worker = new Worker('demo_webworker.js');
+            worker.onmessage = (msg) => {
+                document.querySelector("#testtextfilecontents").value = msg.data.testfilecontents;
+                document.querySelector("#logviewer").innerHTML = msg.data.log;
+            };
+            function commitAndPush() {
+                worker.postMessage({
+                    testfilecontents: document.querySelector("#testtextfilecontents").value,
+                    commitmessage: document.querySelector("#commitmessageinput").value
+                });
+            }
+            document.querySelector("#gitrepourl").innerHTML = `git clone ${self.location.origin}/test`;
+        </script>
+    </body>
+</html>
