@@ -29,19 +29,14 @@ http.createServer( (request, response) => {
     response.setHeader("Access-Control-Allow-Origin", "*");
     console.log(request.method, request.url);
 
-    if(path.indexOf('lg2.') === 0) {
-        // lg2.js and lg2.wasm are in the examples folder
-        path = 'examples/' + path;
-    }
-
     if (request.method==='OPTIONS') {
         response.setHeader("Access-Control-Allow-Headers", "*");
         response.statusCode = 200;
         response.end();
     } else if(fs.existsSync(path)) {
-        if(path.indexOf('.js') === path.length-3) {
+        if (path.indexOf('.js') === path.length-3) {
             response.setHeader('Content-Type', 'application/javascript');
-        } else if(path.indexOf('.wasm') === path.length-5) {
+        } else if (path.indexOf('.wasm') === path.length-5) {
             response.setHeader('Content-Type', 'application/wasm');
         }
         response.end(fs.readFileSync(path));
