@@ -24,16 +24,30 @@
             <h1>GIT in the browser</h1>
             <p>
                 <em>
-                    A demonstration of the <a href="https://github.com/petersalomonsen/wasm-git">WASM-git</a> project.
-                    This is open for testing and demo purposes only. <b>Please don't abuse!</b>
+                    A demonstration of the <a target="_blank" href="https://github.com/petersalomonsen/wasm-git">WASM-git</a> project.
+                    This is open for testing and demo purposes only, running in the free tier of
+                    <a target="_blank" href="https://kubesail.com/">kubesail</a>.
+                    <b>Use at own risk (data may be lost and don't store personal data), and please don't abuse!</b>
                 </em>            
             </p>
-            
+            <p>
+                When cloning using WASM-git the git repository is persisted in your browser using the
+                <a target="_blank" href="https://emscripten.org/docs/api_reference/Filesystem-API.html#filesystem-api-idbfs">Emscripten IDBFS</a>.
+                This simple demo app lets you create and edit files, you can pull updates from the server,
+                and if you log in you can also push to the demo server. <a target="_blank" href="https://near.org/">near.org</a> is used for authentication and access control.
+            </p>
+            <p>Because of <a target="_blank" href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">CORS</a> you cannot
+            type any git server address in the field below, unless it's open for cross origin resource sharing. A workaround
+            is to set up a <a target="_blank" href="https://github.com/petersalomonsen/wasm-git/blob/master/examples/webserverwithgithubproxy.js">proxy</a>.
+            </p>
+            <p>
+                For more information about this demo, check out the <a target="_blank" href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
+            </p>
             <div style="display: flex">
                 <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
                 <button onclick="clone()" id="clonebutton">Clone</button>
             </div>
-
+            <br />
             <br />
             <template id="dircontentline">
                 <div style="display: flex;">
@@ -46,11 +60,18 @@
             </div>
             
             <br />
+            <br />
             <div style="display: none;" id="commandtoolbar">
+                <button onclick="openEditor()">New file</button>
                 <button onclick="gitcommand('pull')">Pull</button>
+                <button onclick="gitcommand('push')">Push</button>
                 <button onclick="gitcommand('log')">Log</button>
                 <button onclick="gitcommand('status')">Status</button>
                 <button onclick="deletelocal()">Delete local clone</button>
+                <button onclick="clearconsole()">Clear output</button>
+                <div style="flex-grow: 1"></div>
+                <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
+                <span id="currentuserspan"></span>
             </div>
             <div id="console" readonly 
                 style="background-color: black; 
@@ -71,13 +92,17 @@
                     background-color: rgba(255,255,255,0.95);
                     z-index: 10000;">
                 <p>
-                    <button id="savebutton">save</button>
+                    <button id="savebutton">commit</button>
                     <button id="cancelbutton">cancel</button>
-                    <input type="text" id="filenamefield" title="filename" />
+                    
+                    filename: <input type="text" id="filenamefield" title="filename" />
+                    
+                    commit message: <input type="text" id="commitmessagefield" title="commit message" />
                 </p>
                 <textarea style="flex-grow: 1; width: 100%; height: 100%"></textarea>
             </div>
         </template>
+        <script src="https://cdn.jsdelivr.net/gh/nearprotocol/near-api-js/dist/near-api-js.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script src="main.js"></script>
     </body>
