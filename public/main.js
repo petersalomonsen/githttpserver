@@ -15,6 +15,10 @@ function emptyDirView() {
     }
 }
 
+function clearconsole() {
+    document.querySelector('#console').innerHTML = '';
+}
+
 worker.onmessage = (msg) => {
     const consolediv = document.querySelector('#console');
 
@@ -67,13 +71,6 @@ worker.onmessage = (msg) => {
     }
     consolediv.scrollTop = consolediv.scrollHeight;
 };
-
-function commitAndPush() {
-    worker.postMessage({
-        testfilecontents: document.querySelector("#testtextfilecontents").value,
-        commitmessage: document.querySelector("#commitmessageinput").value
-    });
-}
 
 function clone() {
     document.querySelector('#clonebutton').disabled = true;
@@ -138,25 +135,32 @@ function gitcommand(cmd) {
 }
 
 function openEditor(filename) {
-    worker.postMessage({
-        command: 'readfile',
-        filename: filename
-    });
-    addFileContentListener(filename, contents => {
+    const onFileContentReady = contents => {
         const editorElement = document.querySelector('#editortemplate').content.cloneNode(true);
         const el = editorElement.querySelector('textarea');
         el.value = contents;
         const filenamefieldelement = editorElement.querySelector('#filenamefield');
+        const commitmessageelement = editorElement.querySelector('#commitmessagefield');
         filenamefieldelement.value = filename;
+        if (filename) {
+            commitmessageelement.value = `edited ${filename}`;
+        } else {
+            commitmessageelement.value = 'add new file';
+        }
         editorElement.querySelector('#savebutton').onclick = () => {
-            if(el.value !== contents) {
+            if(filenamefieldelement.value && el.value !== contents) {
                 worker.postMessage({
-                    command: 'writecommitandpush',
+                    command: 'writeandcommit',
+                    commitmessage: commitmessageelement.value,
                     filename: filenamefieldelement.value,
                     contents: el.value
                 });
+                document.body.removeChild(document.querySelector('#editor'));
+            } else if (!filenamefieldelement.value ) {
+                console.error('missing filename');
+            } else if (el.value === contents) {
+                console.error('no changes');
             }
-            document.body.removeChild(document.querySelector('#editor'));
         };
 
         editorElement.querySelector('#cancelbutton').onclick = () => {
@@ -164,8 +168,83 @@ function openEditor(filename) {
         }
 
         document.body.appendChild(editorElement);
-    });
+    };
+
+    if (filename) {
+        worker.postMessage({
+            command: 'readfile',
+            filename: filename
+        });
+        addFileContentListener(filename, onFileContentReady);
+    } else {
+        filename = '';
+        onFileContentReady('new file');
+    }
 }
 
 const lastUrl = localStorage.getItem('lastRemoteUrl');
 document.querySelector("#gitrepourl").value = lastUrl ? lastUrl : `${self.location.origin}/test`;
+
+
+// configure minimal network settings and key storage
+const nearconfig = {
+    nodeUrl: 'https://rpc.testnet.near.org',
+    walletUrl: 'https://wallet.testnet.near.org',
+    helperUrl: 'https://helper.testnet.near.org',
+    contractName: 'acl.testnet',
+    deps: {
+      keyStore: new nearApi.keyStores.BrowserLocalStorageKeyStore()
+    }
+  };
+  
+// open a connection to the NEAR platform
+
+async function login() {
+    await walletConnection.requestSignIn(
+        nearconfig.contractName,
+        'WASM-git'
+    );
+    await loadAccountData();
+}
+
+async function logout() {
+    await walletConnection.requestSignOut();
+}
+
+async function loadAccountData() {
+    let currentUser = {
+        accountId: walletConnection.getAccountId(),
+        balance: (await walletConnection.account().state()).amount
+    }
+    document.querySelector('#loginbutton').style.display = 'none';
+    document.querySelector('#currentuserspan').innerHTML = currentUser.accountId;
+    const tokenMessage = btoa(JSON.stringify({accountId: currentUser.accountId, iat: new Date().getTime()}));
+    const signature = await walletConnection.account()
+        .connection.signer
+            .signMessage(new TextEncoder().encode(tokenMessage), currentUser.accountId
+    );
+
+    worker.postMessage({
+        accessToken: tokenMessage + '.' + btoa(String.fromCharCode(...signature.signature)),
+        useremail: currentUser.accountId,
+        username: currentUser.accountId
+    });
+}
+
+(async function() {
+    window.near = await nearApi.connect(nearconfig);
+    const walletConnection = new nearApi.WalletConnection(near);
+    window.walletConnection = walletConnection;
+
+    console.log(walletConnection);
+
+    // Load in account data
+    if (walletConnection.getAccountId()) {
+        loadAccountData();
+    } else {
+        console.log('no loggedin user');
+        return;
+    }
+    
+    
+})(window)

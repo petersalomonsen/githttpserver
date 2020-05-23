@@ -17,6 +17,12 @@ var Module = {
     }
 };
 
+let accessToken = 'ANONYMOUS';
+XMLHttpRequest.prototype._open = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+  this._open(method, url, async, user, password);
+  this.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+}
 importScripts('https://unpkg.com/wasm-git@0.0.2/lg2.js');
 
 Module.onRuntimeInitialized = () => {
@@ -29,15 +35,24 @@ Module.onRuntimeInitialized = () => {
     let currentRepoRootDir;
 
     onmessage = (msg) => {
-      if (msg.data.command === 'writecommitandpush') {
+      if (msg.data.accessToken) {
+        accessToken = msg.data.accessToken;
+        callMain(["config", "user.name", msg.data.username])
+        callMain(["config", "user.email", msg.data.useremail])
+      } else if (msg.data.command === 'writeandcommit') {
         FS.writeFile(msg.data.filename, msg.data.contents);
         lg.callMain(['add', '--verbose', msg.data.filename]);
-        lg.callMain(['commit','-m', `edited ${msg.data.filename}`]);
+        lg.callMain(['commit','-m', msg.data.commitmessage]);  
         FS.syncfs(false, () => {
           console.log(currentRepoRootDir, 'stored to indexeddb');
-          lg.callMain(['push']);
           postMessage({ dircontents: FS.readdir('.') });
-        });        
+        });      
+      } else if (msg.data.command === 'push') {
+        lg.callMain(['push']);
+        FS.syncfs(false, () => {
+          console.log(currentRepoRootDir, 'stored to indexeddb');
+          postMessage({ dircontents: FS.readdir('.') });
+        });
       } else if (msg.data.command === 'synclocal') {
         currentRepoRootDir = msg.data.url.substring(msg.data.url.lastIndexOf('/') + 1);
         console.log('synclocal', currentRepoRootDir);

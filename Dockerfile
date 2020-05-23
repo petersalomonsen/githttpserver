@@ -1,10 +1,10 @@
-FROM node:12 AS build
+FROM node:14 AS build
 WORKDIR /usr/src/app
 COPY . .
 RUN npm install
 
-FROM node:12
+FROM node:14
 WORKDIR /usr/src/app
 COPY --from=build /usr/src/app /usr/src/app
 EXPOSE 5000
-CMD [ "node", "githttpserver.js" ]
+CMD [ "node", "server/githttpserver.js" ]
