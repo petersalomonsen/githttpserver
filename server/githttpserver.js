@@ -6,7 +6,8 @@
 import { checkPermission, PERMISSION_OWNER, PERMISSION_CONTRIBUTOR, PERMISSION_FREE } from './checkpermission.js';
 
 import { createServer } from 'http';
-import { exists, readFile } from 'fs';
+import { exists, readFile, mkdir } from 'fs';
+import { exec } from 'child_process';
 import * as cgi from 'cgi';
 
 function createCGI(accountId) {
@@ -41,13 +42,24 @@ createServer(async (request, response) => {
         
         try {
             const repository = path.split('/')[0];
-            
+
             // Access control
             let { accountId, permission } = await checkPermission(repository,
                 request.headers.authorization ? request.headers.authorization.substring('Bearer '.length) : 'ANONYMOUS'
             );
             // Invoke git            
             if (permission & (PERMISSION_OWNER | PERMISSION_CONTRIBUTOR | PERMISSION_FREE)) {
+                if (permission & (PERMISSION_OWNER)) {
+                    const repodir = `${process.env.GIT_PROJECT_ROOT}/${repository}`;
+                    // Create repo if not exists
+                    if (!await new Promise(resolve =>
+                            exists(repodir, res => resolve(res)))
+                    ) {
+                        await new Promise(resolve => mkdir(repodir, () => resolve()));
+                        await new Promise(resolve => exec(`git init --bare ${repodir}`, (res) => resolve(res)));
+                        console.log(`Created repository ${repository} for owner ${accountId}`);
+                    }
+                }
                 // Read and write permission
                 createCGI(accountId)(request, response);
             } else if(permission) {

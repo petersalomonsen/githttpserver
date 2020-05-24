@@ -25,20 +25,24 @@ XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
 }
 importScripts('https://unpkg.com/wasm-git@0.0.2/lg2.js');
 
+function writeGlobalConfig(username, useremail) {
+  FS.writeFile('/home/web_user/.gitconfig', '[user]\n' +
+                `name = ${username}\n` +
+                `email = ${useremail}`);
+
+}
+
 Module.onRuntimeInitialized = () => {
     const lg = Module;
 
-    FS.writeFile('/home/web_user/.gitconfig', '[user]\n' +
-                'name = Test User\n' +
-                'email = test@example.com');
+    writeGlobalConfig('Test user', 'test@example.com');
 
     let currentRepoRootDir;
 
     onmessage = (msg) => {
       if (msg.data.accessToken) {
         accessToken = msg.data.accessToken;
-        callMain(["config", "user.name", msg.data.username])
-        callMain(["config", "user.email", msg.data.useremail])
+        writeGlobalConfig(msg.data.username, msg.data.useremail);
       } else if (msg.data.command === 'writeandcommit') {
         FS.writeFile(msg.data.filename, msg.data.contents);
         lg.callMain(['add', '--verbose', msg.data.filename]);

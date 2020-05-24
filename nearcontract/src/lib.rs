@@ -5,7 +5,7 @@ use std::collections::HashMap;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-const PERMISSION_OWNER: u32 = 0x01;
+const PERMISSION_OWNER: u32 = 0x01; // Can create
 const PERMISSION_CONTRIBUTOR: u32 = 0x02;
 const PERMISSION_READER: u32 = 0x04;
 const PERMISSION_FREE: u32 = 0x08;
