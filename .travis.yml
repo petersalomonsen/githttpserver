@@ -1,5 +1,16 @@
-language: node_js
-node_js:
-  - 14
-
-script: bash test.sh
+matrix:
+  include:
+    - language: node_js
+      node_js:
+        - 14
+      script: bash test.sh
+    - language: rust
+      script:
+        - cd nearcontract
+        - cargo test --package rust-simple-access-control -- --nocapture
+    - language: node_js
+      node_js:
+        - 14
+      script:
+        - npm install
+        - npm test

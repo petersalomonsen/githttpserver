@@ -9,6 +9,7 @@ const PERMISSION_OWNER: u32 = 0x01; // Can create
 const PERMISSION_CONTRIBUTOR: u32 = 0x02;
 const PERMISSION_READER: u32 = 0x04;
 const PERMISSION_FREE: u32 = 0x08;
+static EVERYONE: &str = "EVERYONE";
 
 // add the following attributes to prepare your code for serialization and invocation on the blockchain
 // More built-in Rust attributes here: https://doc.rust-lang.org/reference/attributes.html#built-in-attributes-index
@@ -42,7 +43,12 @@ impl RepositoryPermission {
         let path_users = self.permission.get(&path.to_string());
         if path_users.is_some() {
             let permission = path_users.unwrap().get(&account_id);
-            return if permission.is_some() { *permission.unwrap() } else { 0 };
+            if permission.is_some() {
+                return *permission.unwrap();
+            } else {
+                let everyone_permission = path_users.unwrap().get(EVERYONE);
+                return if everyone_permission.is_some() { *everyone_permission.unwrap() } else { 0 };
+            }
         } else {
             return PERMISSION_FREE;
         }
@@ -113,5 +119,36 @@ mod tests {
         testing_env!(context3);
 
         assert_eq!(PERMISSION_OWNER, contract.get_permission("johan".to_string(), "testrepo".to_string()));
+    }
+
+    #[test]
+    fn read_permission_for_everyone() {
+        let context = get_context("peter".to_string(), vec![], false);
+        testing_env!(context);
+        let mut contract = RepositoryPermission::default();
+        assert_eq!(PERMISSION_FREE, contract.get_permission("peter".to_string(), "testrepo".to_string()));
+        assert_eq!(true, contract.set_permission("testrepo".to_string(), "peter".to_string(), PERMISSION_OWNER));
+        assert_eq!(PERMISSION_OWNER, contract.get_permission("peter".to_string(), "testrepo".to_string()));
+        
+        assert_eq!(true, contract.set_permission("testrepo".to_string(), EVERYONE.to_string(), PERMISSION_READER));
+        assert_eq!(PERMISSION_READER, contract.get_permission(EVERYONE.to_string(), "testrepo".to_string()));
+        assert_eq!(PERMISSION_READER, contract.get_permission("randomuser".to_string(), "testrepo".to_string()));
+    }
+
+    #[test]
+    fn write_permission_for_everyone_read_for_anonymous() {
+        let context = get_context("peter".to_string(), vec![], false);
+        testing_env!(context);
+        let mut contract = RepositoryPermission::default();
+        assert_eq!(PERMISSION_FREE, contract.get_permission("peter".to_string(), "testrepo".to_string()));
+        assert_eq!(true, contract.set_permission("testrepo".to_string(), "peter".to_string(), PERMISSION_OWNER));
+        assert_eq!(PERMISSION_OWNER, contract.get_permission("peter".to_string(), "testrepo".to_string()));
+        
+        assert_eq!(true, contract.set_permission("testrepo".to_string(), EVERYONE.to_string(), PERMISSION_CONTRIBUTOR));
+        assert_eq!(true, contract.set_permission("testrepo".to_string(), "ANONYMOUS".to_string(), PERMISSION_READER));
+
+        assert_eq!(PERMISSION_CONTRIBUTOR, contract.get_permission(EVERYONE.to_string(), "testrepo".to_string()));
+        assert_eq!(PERMISSION_CONTRIBUTOR, contract.get_permission("ANNONYMOUS".to_string(), "testrepo".to_string()));
+        assert_eq!(PERMISSION_READER, contract.get_permission("ANONYMOUS".to_string(), "testrepo".to_string()));
     }
 }

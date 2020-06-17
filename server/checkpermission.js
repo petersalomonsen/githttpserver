@@ -43,13 +43,13 @@ export async function checkPermission(repository, token) {
                 "viewMethods": ['get_permission']
             });
              
-        const permission = await contract.get_permission({account_id: account.accountId, path: repository});
+        const permission = await contract.get_permission({account_id: 'ANONYMOUS', path: repository});
         if (permission === PERMISSION_FREE) {
             console.log('ANONYMOUS read permission granted to repository', repository);
             return { accountId: 'ANONYMOUS', permission: PERMISSION_READER };
         } else {
-            console.log('No access for ANONYMOUS to repository', repository);
-            return { accountId: 'ANONYMOUS', permission: 0 };
+            console.log('Permission', permission, 'granted for ANONYMOUS to repository', repository);
+            return { accountId: 'ANONYMOUS', permission: permission };
         }
     }
 

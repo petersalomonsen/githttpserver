@@ -26,3 +26,7 @@ test:
 build:
 
 `env 'RUSTFLAGS=-C link-arg=-s' cargo build --target wasm32-unknown-unknown --release`
+
+deploy:
+
+`near deploy --wasmFile target/wasm32-unknown-unknown/release/rust_simple_access_control.wasm --accountId acl.testnet`
