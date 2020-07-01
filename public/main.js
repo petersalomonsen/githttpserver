@@ -1,4 +1,4 @@
-const worker = new Worker('demo_webworker.js');
+const worker = new Worker('libgit2_webworker.js');
 const filecontentslisteners = {};
 
 function addFileContentListener(filename, listenerfunc) {
