@@ -22,9 +22,7 @@ function clearconsole() {
 worker.onmessage = (msg) => {
     const consolediv = document.querySelector('#console');
 
-    if (msg.data.ready) {
-        synclocal();
-    } else if (msg.data.stdout) {
+    if (msg.data.stdout) {
         const logline = document.createElement('pre');
         logline.innerHTML = msg.data.stdout;
         consolediv.appendChild(logline);
@@ -185,6 +183,7 @@ function openEditor(filename) {
 const lastUrl = localStorage.getItem('lastRemoteUrl');
 document.querySelector("#gitrepourl").value = lastUrl ? lastUrl : `${self.location.origin}/test`;
 
+synclocal();
 
 // configure minimal network settings and key storage
 const nearconfig = {
