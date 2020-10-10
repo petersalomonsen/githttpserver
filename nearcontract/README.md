@@ -5,7 +5,7 @@ Simple near-protocol Smart Contract for Access Control
 
 Using near-cli:
 
-`near call acl.testnet set_permission --accountId myaccountid.testnet '{"path": "myrepositorypath", "account_id": "myaccountid.testnet", "permission": 1}'`
+`near call acl.testnet set_permission --amount "0.1" --accountId myaccountid.testnet '{"path": "myrepositorypath", "account_id": "myaccountid.testnet", "permission": 1}'`
 
 For creating a repository you need to have the owner permission, see [lib.rs](src/lib.rs) for a list of permission bit values.
 
