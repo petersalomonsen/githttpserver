@@ -1,3 +1,5 @@
+import { modal } from './modal.js';
+
 const worker = new Worker('libgit2_webworker.js');
 const filecontentslisteners = {};
 
@@ -10,17 +12,36 @@ function addFileContentListener(filename, listenerfunc) {
 
 function emptyDirView() {
     const dircontentselm = document.querySelector('#dircontents');
-    while(dircontentselm.hasChildNodes()) {
+    while (dircontentselm.hasChildNodes()) {
         dircontentselm.removeChild(dircontentselm.firstChild);
     }
 }
 
-function clearconsole() {
-    document.querySelector('#console').innerHTML = '';
+window.newRepository = async function () {
+    const repositoryName = await modal(`
+        <h3>Reserve repository name</h3>
+        <p>This will set your account as the owner of the repository with the specified name,
+        provided it's not already taken.</p>
+        <ul>
+            <li>You will be charged 0.1N</li>
+            <li>Your data is NOT encrypted on the server</li>
+            <li>This is just a test/demo and may be removed at any time without notice</li>
+        </ul>
+        <p><input type="text" placeholder="repository name"></p>
+        <button onclick="getRootNode().result(null)">cancel</button>
+        <button onclick="getRootNode().result(getRootNode().querySelector('input').value)">create</button>
+    `);
+    if (repositoryName) {
+        await takeOwnershipOfRepository(repositoryName);
+    }
+}
+
+window.clearconsole = function () {
+    document.querySelector('#consolecontent').innerHTML = '';
 }
 
 worker.onmessage = (msg) => {
-    const consolediv = document.querySelector('#console');
+    const consolediv = document.querySelector('#consolecontent');
 
     if (msg.data.stdout) {
         const logline = document.createElement('pre');
@@ -31,12 +52,11 @@ worker.onmessage = (msg) => {
         logline.innerHTML = msg.data.stderr;
         logline.style.color = 'red';
         consolediv.appendChild(logline);
-    } else if (msg.data.dircontents) {        
+    } else if (msg.data.dircontents) {
         const dircontentselm = document.querySelector('#dircontents');
-        
+
         if (msg.data.dircontents.find(dir => dir === '.git')) {
             document.querySelector('#clonebutton').disabled = true;
-            document.querySelector('#commandtoolbar').style.display = 'flex';
         }
 
         emptyDirView();
@@ -44,33 +64,32 @@ worker.onmessage = (msg) => {
         msg.data.dircontents
             .filter(direntry => direntry.indexOf('.') > 0) // only showing files for now
             .forEach(direntry => {
-            const dircontentlineelement = document.querySelector('#dircontentline').content.cloneNode(true);
-            
-            dircontentlineelement.querySelector('#filename').innerHTML = direntry;
-            if (
-                direntry.indexOf('.') > 0
-            ) {
-                dircontentlineelement.querySelector('#editbutton').onclick = () => openEditor(direntry);
-            } else {
-                dircontentlineelement.querySelector('#editbutton').style.display = 'none';
-            }
-            dircontentselm.appendChild(dircontentlineelement);   
-        });
+                const dircontentlineelement = document.querySelector('#dircontentline').content.cloneNode(true);
+
+                dircontentlineelement.querySelector('#filename').innerHTML = direntry;
+                if (
+                    direntry.indexOf('.') > 0
+                ) {
+                    dircontentlineelement.querySelector('#editbutton').onclick = () => openEditor(direntry);
+                } else {
+                    dircontentlineelement.querySelector('#editbutton').style.display = 'none';
+                }
+                dircontentselm.appendChild(dircontentlineelement);
+            });
     } else if (msg.data.filecontents) {
         filecontentslisteners[msg.data.filename].forEach(func => func(msg.data.filecontents));
         delete filecontentslisteners[msg.data.filename];
     } else if (msg.data.deleted) {
         const dircontentselm = document.querySelector('#dircontents');
-        
+
         document.querySelector('#clonebutton').disabled = false;
-        document.querySelector('#commandtoolbar').style.display = 'none';
-        
+
         emptyDirView();
     }
     consolediv.scrollTop = consolediv.scrollHeight;
 };
 
-function clone() {
+window.clone = function () {
     document.querySelector('#clonebutton').disabled = true;
     worker.postMessage({
         command: 'clone',
@@ -78,25 +97,25 @@ function clone() {
     });
 }
 
-function opendirentry(filename) {
+window.opendirentry = function (filename) {
     worker.postMessage({
         command: 'readfile',
         filename: filename
     });
-        
+
     addFileContentListener(filename, contents => {
         let blob;
         if (filename.indexOf('.') > 0) {
-            switch(filename.split('.')[1]) {
+            switch (filename.split('.')[1]) {
                 case 'md':
-                    blob = new Blob([marked(contents)], {type: 'text/html'});
+                    blob = new Blob([marked(contents)], { type: 'text/html' });
                     break;
                 case 'html':
-                    blob = new Blob([contents], {type: 'text/html'});
+                    blob = new Blob([contents], { type: 'text/html' });
                     break;
                 default:
-                    blob = new Blob([contents], {type: 'text/plain'});
-                    break;                    
+                    blob = new Blob([contents], { type: 'text/plain' });
+                    break;
             }
         }
         window.open(
@@ -107,10 +126,9 @@ function opendirentry(filename) {
     });
 }
 
-function synclocal() {
+window.synclocal = function () {
     emptyDirView();
     document.querySelector('#clonebutton').disabled = false;
-    document.querySelector('#commandtoolbar').style.display = 'none';
     const remoteUrl = document.querySelector("#gitrepourl").value;
     localStorage.setItem('lastRemoteUrl', remoteUrl);
     worker.postMessage({
@@ -119,20 +137,20 @@ function synclocal() {
     });
 }
 
-function deletelocal() {
+window.deletelocal = function () {
     worker.postMessage({
         command: 'deletelocal',
         url: document.querySelector("#gitrepourl").value
     });
 }
 
-function gitcommand(cmd) {
+window.gitcommand = function (cmd) {
     worker.postMessage({
         command: cmd
     });
 }
 
-function openEditor(filename) {
+window.openEditor = function (filename) {
     const onFileContentReady = contents => {
         const editorElement = document.querySelector('#editortemplate').content.cloneNode(true);
         const el = editorElement.querySelector('textarea');
@@ -146,7 +164,7 @@ function openEditor(filename) {
             commitmessageelement.value = 'add new file';
         }
         editorElement.querySelector('#savebutton').onclick = () => {
-            if(filenamefieldelement.value && el.value !== contents) {
+            if (filenamefieldelement.value && el.value !== contents) {
                 worker.postMessage({
                     command: 'writeandcommit',
                     commitmessage: commitmessageelement.value,
@@ -154,7 +172,7 @@ function openEditor(filename) {
                     contents: el.value
                 });
                 document.body.removeChild(document.querySelector('#editor'));
-            } else if (!filenamefieldelement.value ) {
+            } else if (!filenamefieldelement.value) {
                 console.error('missing filename');
             } else if (el.value === contents) {
                 console.error('no changes');
@@ -192,13 +210,13 @@ const nearconfig = {
     helperUrl: 'https://helper.testnet.near.org',
     contractName: 'acl.testnet',
     deps: {
-      keyStore: new nearApi.keyStores.BrowserLocalStorageKeyStore()
+        keyStore: new nearApi.keyStores.BrowserLocalStorageKeyStore()
     }
-  };
-  
+};
+
 // open a connection to the NEAR platform
 
-async function login() {
+window.login = async function () {
     await walletConnection.requestSignIn(
         nearconfig.contractName,
         'WASM-git'
@@ -206,7 +224,7 @@ async function login() {
     await loadAccountData();
 }
 
-async function logout() {
+window.logout = async function () {
     await walletConnection.requestSignOut();
 }
 
@@ -217,11 +235,11 @@ async function loadAccountData() {
     }
     document.querySelector('#loginbutton').style.display = 'none';
     document.querySelector('#currentuserspan').innerHTML = currentUser.accountId;
-    const tokenMessage = btoa(JSON.stringify({accountId: currentUser.accountId, iat: new Date().getTime()}));
+    const tokenMessage = btoa(JSON.stringify({ accountId: currentUser.accountId, iat: new Date().getTime() }));
     const signature = await walletConnection.account()
         .connection.signer
-            .signMessage(new TextEncoder().encode(tokenMessage), currentUser.accountId
-    );
+        .signMessage(new TextEncoder().encode(tokenMessage), currentUser.accountId
+        );
 
     worker.postMessage({
         accessToken: tokenMessage + '.' + btoa(String.fromCharCode(...signature.signature)),
@@ -230,10 +248,27 @@ async function loadAccountData() {
     });
 }
 
-(async function() {
+async function takeOwnershipOfRepository(path) {
+    walletConnection.account().functionCall('acl.testnet', 'set_permission',
+        {
+            'account_id': window.walletConnection.getAccountId(),
+            'path': path, 'permission': 1
+        }
+        , null, new BN('100000000000000000000000', 10));
+}
+
+(async function () {
     window.near = await nearApi.connect(nearconfig);
-    const walletConnection = new nearApi.WalletConnection(near);
+    const walletConnection = new nearApi.WalletAccount(window.near);
     window.walletConnection = walletConnection;
+
+    window.permissionContract = await near.loadContract(nearconfig.contractName, {
+        // View methods are read only. They don't modify the state, but usually return some value.
+        viewMethods: ["get_permission"],
+        // Change methods can modify the state. But you don't receive the returned value when called.
+        changeMethods: ["set_permission"],
+        sender: walletConnection.getAccountId()
+    });
 
     console.log(walletConnection);
 
@@ -244,6 +279,6 @@ async function loadAccountData() {
         console.log('no loggedin user');
         return;
     }
-    
-    
+
+
 })(window)
