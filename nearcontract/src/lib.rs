@@ -42,7 +42,7 @@ impl RepositoryPermission {
             self.permission.insert(path.to_string(), path_users);
             return true;
         } else {
-            return false;
+            panic!("permission denied");
         }
     }
 
@@ -187,6 +187,47 @@ mod tests {
     }
 
     #[test]
+    fn deny_set_permission() {
+        let context = get_context(
+            "johan".to_string(),
+            vec![],
+            false,
+            REQUIRED_ATTACHED_DEPOSIT,
+        );
+        testing_env!(context);
+        let mut contract: RepositoryPermission = RepositoryPermission::default();
+        assert_eq!(
+            PERMISSION_FREE,
+            contract.get_permission("johan".to_string(), "testrepo".to_string())
+        );
+        assert_eq!(
+            true,
+            contract.set_permission(
+                "testrepo".to_string(),
+                "johan".to_string(),
+                PERMISSION_OWNER
+            )
+        );
+
+        testing_env!(get_context(
+            "someotheruser".to_string(),
+            vec![],
+            false,
+            REQUIRED_ATTACHED_DEPOSIT,
+        ));
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            contract.set_permission(
+                "testrepo".to_string(),
+                "someotheruser".to_string(),
+                PERMISSION_OWNER,
+            );
+        }));
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn read_permission_for_everyone() {
         let context = get_context(
             "peter".to_string(),
@@ -293,15 +334,15 @@ mod tests {
     fn require_attached_deposits() {
         let context = get_context("peter".to_string(), vec![], false, 2);
         testing_env!(context);
+        let mut contract = RepositoryPermission::default();
 
-        let result = std::panic::catch_unwind(|| {
-            let mut contract = RepositoryPermission::default();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             return contract.set_permission(
                 "testrepo".to_string(),
                 "peter".to_string(),
                 PERMISSION_OWNER,
             );
-        });
+        }));
         assert!(result.is_err());
     }
 }

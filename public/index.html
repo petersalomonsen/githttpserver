@@ -1,88 +1,277 @@
 <!doctype html>
 <html>
-    <head>
-        <style>
-            * {
-                font-family: monospace;
-                font-size: 16px;
-            }
-            h1 {
-                font-size: 30px;
-            }
+
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <style>
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+
+        * {
+            font-family: monospace;
+            font-size: 16px;
+        }
+
+        h1 {
+            font-size: 30px;
+        }
+
+        button {
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        #contentarea {
+            max-width: 1024px;
+            padding-left: 20px;
+            grid-area: main;
+            overflow-y: scroll;
+        }
+
+        .maingrid {
+            display: inline-grid;
+            grid-template-areas:
+                'header header'
+                'menu main'
+                'menu footer';
+            grid-template-columns: auto auto;
+            grid-template-rows: 50px auto 100px;
+            transition: all 0.2s;
+            margin: 0px;
+            color: #020;
+            background-color: #ddd;
+        }
+
+        #header {
+            grid-area: header;
+            background-color: #333;
+            display: flex;
+        }
+
+        #console {
+            grid-area: footer;
+            display: inline-grid;
+            grid-template-columns: auto 10px;
+            padding: 3px;
+            padding-left: 20px;
+            padding-right: 20px;
+            max-width: 1024px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: green;
+        }
+
+        #consolecontent {
+            height: 100%;
+            overflow: auto;
+        }
+
+        #sidemenu {
+            background-color: #333;
+            color: #0f0;
+            grid-area: menu;
+            z-index: 1000;
+            transition: all 0.2s;
+            width: 0px;
+        }
+
+        #sidemenu li {
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        #sidemenu li {
+            list-style-type: none;
+            padding-top: 4px;
+            padding-bottom: 4px;
+
+            padding-left: 10px;
+        }
+
+        #sidemenu li:hover {
+            background-color: #666;
+        }
+
+        #sidemenu ul {
+            padding-left: 0px;
+        }
+
+        @media screen and (max-width: 600px) {
             body {
-                display: flex;
-                justify-content: center;
+                grid-template-areas:
+                    'header header'
+                    'menu main'
+                    'menu footer';
+                grid-template-columns: auto auto;
             }
-            button {
-                font-size: 20px;
-            }
+
             #contentarea {
-                max-width: 1024px;                
+                grid-area: main-start / menu-start / main-end / main-end;
             }
-        </style>
-    </head>
-    <body>
-        <div id="contentarea">
-            <h1>GIT in the browser</h1>
-            <p>
-                <em>
-                    A demonstration of the <a target="_blank" href="https://github.com/petersalomonsen/wasm-git">WASM-git</a> project.
-                    This is open for testing and demo purposes only, running in the free tier of
-                    <a target="_blank" href="https://kubesail.com/">kubesail</a>.
-                    <b>Use at own risk (data may be lost and don't store personal data), and please don't abuse!</b>
-                </em>            
-            </p>
-            <p>
-                When cloning using WASM-git the git repository is persisted in your browser using the
-                <a target="_blank" href="https://emscripten.org/docs/api_reference/Filesystem-API.html#filesystem-api-idbfs">Emscripten IDBFS</a>.
-                This simple demo app lets you create and edit files, you can pull updates from the server,
-                and if you log in you can also push to the demo server. <a target="_blank" href="https://near.org/">near.org</a> is used for authentication and access control.
-            </p>
-            <p>Because of <a target="_blank" href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">CORS</a> you cannot
-            type any git server address in the field below, unless it's open for cross origin resource sharing. A workaround
-            is to set up a <a target="_blank" href="https://github.com/petersalomonsen/wasm-git/blob/master/examples/webserverwithgithubproxy.js">proxy</a>.
-            </p>
-            <p>
-                For more information about this demo, check out the <a target="_blank" href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
-            </p>
-            <div style="display: flex">
-                <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
-                <button onclick="clone()" id="clonebutton">Clone</button>
-            </div>
-            <br />
-            <br />
-            <template id="dircontentline">
-                <div style="display: flex;">
-                    <a id="filename" style="flex-grow: 1; text-overflow: ellipsis;" href="#"
-                        onclick="event.preventDefault();opendirentry(this.innerHTML)"></a>
-                    <button id="editbutton">edit</button>
-                </div>
-            </template>
-            <div id="dircontents">
-            </div>
-            
-            <br />
-            <br />
-            <div style="display: none;" id="commandtoolbar">
-                <button onclick="openEditor()">New file</button>
-                <button onclick="gitcommand('pull')">Pull</button>
-                <button onclick="gitcommand('push')">Push</button>
-                <button onclick="gitcommand('log')">Log</button>
-                <button onclick="gitcommand('status')">Status</button>
-                <button onclick="deletelocal()">Delete local clone</button>
-                <button onclick="clearconsole()">Clear output</button>
-                <div style="flex-grow: 1"></div>
-                <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
-                <span id="currentuserspan"></span>
-            </div>
-            <div id="console" readonly 
-                style="background-color: black; 
-                    flex-grow: 1;
-                    color: green; width: 100%; height: 200px; overflow: auto" >
-            </div>
+
+            #console {
+                grid-area: footer-start / menu-start / footer-end / footer-end;
+            }
+        }
+
+        .menutogglebutton {
+            padding: 7px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .menutogglebuttonbar1,
+        .menutogglebuttonbar2,
+        .menutogglebuttonbar3 {
+            width: 35px;
+            height: 5px;
+            background-color: #fff;
+            margin: 6px 0;
+            transition: 0.4s;
+        }
+
+        .menutogglebuttonchange .menutogglebuttonbar1 {
+            -webkit-transform: rotate(-45deg) translate(-9px, 6px);
+            transform: rotate(-45deg) translate(-9px, 6px);
+        }
+
+        .menutogglebuttonchange .menutogglebuttonbar2 {
+            opacity: 0;
+        }
+
+        .menutogglebuttonchange .menutogglebuttonbar3 {
+            -webkit-transform: rotate(45deg) translate(-8px, -8px);
+            transform: rotate(45deg) translate(-8px, -8px);
+        }
+
+
+        #currentuserspan {
+            color: white;
+        }
+
+        .arrow {
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            display: inline-block;
+            padding: 3px;
+        }
+
+
+        .right {
+            transform: rotate(-45deg);
+            -webkit-transform: rotate(-45deg);
+        }
+
+        .left {
+            transform: rotate(135deg);
+            -webkit-transform: rotate(135deg);
+        }
+
+        .up {
+            transform: rotate(-135deg);
+            -webkit-transform: rotate(-135deg);
+        }
+
+        .down {
+            transform: rotate(45deg);
+            -webkit-transform: rotate(45deg);
+        }
+
+        #consoletoggle {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="maingrid">
+    <div id="header">
+        <div class="menutogglebutton" onclick="toggleMenu(this)">
+            <div class="menutogglebuttonbar1"></div>
+            <div class="menutogglebuttonbar2"></div>
+            <div class="menutogglebuttonbar3"></div>
         </div>
-        <template id="editortemplate">
-            <div id="editor" style="
+        <span style="flex-grow: 1"></span>
+        <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
+        <span id="currentuserspan"></span>
+    </div>
+    <div id="sidemenu">
+        <ul>
+
+            <li onclick="openEditor()">New file</li>
+            <li onclick="gitcommand('pull')">Pull</li>
+            <li onclick="gitcommand('push')">Push</li>
+            <li onclick="gitcommand('log')">Log</li>
+            <li onclick="gitcommand('status')">Status</li>
+            <li onclick="clearconsole()">Clear output</li>
+            <li onclick="deletelocal()">Delete local clone</li>
+            <li style="height: 15px;"></li>
+
+            <li onclick="newRepository()">New repository</li>
+        </ul>
+    </div>
+    <div id="contentarea">
+        <h1>GIT in the browser</h1>
+        <p>
+            <em>
+                A demonstration of the <a target="_blank"
+                    href="https://github.com/petersalomonsen/wasm-git">WASM-git</a> project.
+                This is open for testing and demo purposes only.
+                <b>Use at own risk (data may be lost and don't store personal data), and please don't abuse!</b>
+            </em>
+        </p>
+        <p>
+            When cloning using WASM-git the git repository is persisted in your browser using the
+            <a target="_blank"
+                href="https://emscripten.org/docs/api_reference/Filesystem-API.html#filesystem-api-idbfs">Emscripten
+                IDBFS</a>.
+            This simple demo app lets you create and edit files, you can pull updates from the server,
+            and if you log in you can also push to the demo server. Using the testnet of <a target="_blank"
+                href="https://near.org/">NEAR protocol</a> for authentication and access control.
+        </p>
+        <p>Because of <a target="_blank" href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">CORS</a> you
+            cannot
+            type any git server address in the field below, unless it's open for cross origin resource sharing. A
+            workaround
+            is to set up a <a target="_blank"
+                href="https://github.com/petersalomonsen/wasm-git/blob/master/examples/webserverwithgithubproxy.js">proxy</a>.
+        </p>
+        <p>
+            For more information about this demo, check out the <a target="_blank"
+                href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
+        </p>
+        <div style="display: flex">
+            <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
+            <button onclick="clone()" id="clonebutton">Clone</button>
+        </div>
+        <br />
+        <br />
+        <template id="dircontentline">
+            <div style="display: flex;">
+                <a id="filename" style="flex-grow: 1; text-overflow: ellipsis;" href="#"
+                    onclick="event.preventDefault();opendirentry(this.innerHTML)"></a>
+                <button id="editbutton">edit</button>
+            </div>
+        </template>
+        <div id="dircontents">
+        </div>
+
+        <br />
+        <br />
+
+    </div>
+    <div id="console">
+        <div id="consolecontent">
+
+        </div>
+        <div id="consoletoggle" onclick="toggleConsoleHeight()">
+            <i class="arrow up"></i>
+        </div>
+    </div>
+    <template id="editortemplate">
+        <div id="editor" style="
                     display: flex;
                     flex-direction: column;
                     position: absolute;
@@ -93,19 +282,52 @@
                     padding: 10px;
                     background-color: rgba(255,255,255,0.95);
                     z-index: 10000;">
-                <p>
-                    <button id="savebutton">commit</button>
-                    <button id="cancelbutton">cancel</button>
-                    
-                    filename: <input type="text" id="filenamefield" title="filename" />
-                    
-                    commit message: <input type="text" id="commitmessagefield" title="commit message" />
-                </p>
-                <textarea style="flex-grow: 1; width: 100%; height: 100%"></textarea>
-            </div>
-        </template>
-        <script src="https://cdn.jsdelivr.net/gh/nearprotocol/near-api-js/dist/near-api-js.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-        <script src="main.js"></script>
-    </body>
+            <p>
+                <button id="savebutton">commit</button>
+                <button id="cancelbutton">cancel</button>
+
+                filename: <input type="text" id="filenamefield" title="filename" />
+
+                commit message: <input type="text" id="commitmessagefield" title="commit message" />
+            </p>
+            <textarea style="flex-grow: 1; width: 100%; height: 100%"></textarea>
+        </div>
+    </template>
+    <script src="https://cdn.jsdelivr.net/gh/nearprotocol/near-api-js/dist/near-api-js.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bn.js"></script>
+    <script src="main.js" type="module"></script>
+    <script>
+        function toggleMenu(menu) {
+            menu.classList.toggle('menutogglebuttonchange');
+            const sidemenu = document.getElementById('sidemenu');
+            if (menu.classList.contains('menutogglebuttonchange')) {
+                sidemenu.style.width = '200px';
+            } else {
+                sidemenu.style.width = '0px';
+            }
+        }
+        function toggleConsoleHeight() {
+            const maingrid = document.querySelector('.maingrid');
+            const maingridrows = getComputedStyle(maingrid).gridTemplateRows.split(' ');
+
+            const sidemenu = document.getElementById('sidemenu');
+            const consoletoggle = document.querySelector('#consoletoggle i');
+
+            if (maingridrows[2] === '100px') {
+                maingridrows[2] = sidemenu.clientHeight + 'px';
+                consoletoggle.classList.remove('up');
+                consoletoggle.classList.add('down');
+            } else {
+                maingridrows[2] = '100px';
+                consoletoggle.classList.remove('down');
+                consoletoggle.classList.add('up');
+            }
+            maingridrows[1] = 'auto';
+
+            maingrid.style.gridTemplateRows = maingridrows.join(' ');
+        }
+    </script>
+</body>
+
 </html>
