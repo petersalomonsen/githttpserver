@@ -1,8 +1,9 @@
 function toggleMenu() {
     const sidemenu = document.getElementById('sidemenu');
-    sidemenu.classList.toggle('menutogglebuttonchange');
+    const togglebutton = document.querySelector('.menutogglebutton');
+    togglebutton.classList.toggle('menutogglebuttonchange');
 
-    if (sidemenu.classList.contains('menutogglebuttonchange')) {
+    if (togglebutton.classList.contains('menutogglebuttonchange')) {
         sidemenu.style.width = '200px';
     } else {
         sidemenu.style.width = '0px';
