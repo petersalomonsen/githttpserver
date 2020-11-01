@@ -22,22 +22,24 @@ spec:
     targetPort: 5000
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: githttpserver
 spec:
   selector:
     matchLabels:
       app: githttpserver
+  serviceName: "githttpserver"
   replicas: 1
   template:
     metadata:
       labels:
         app: githttpserver
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
       - name: githttpserver
-        image: psalomo/githttpserver:latest
+        image: psalomo/githttpserver:0.0.4
         volumeMounts:
         - mountPath: /mnt/gitrepos
           name: gitreposvolume
