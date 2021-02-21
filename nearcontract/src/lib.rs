@@ -1,4 +1,4 @@
-use borsh::{BorshDeserialize, BorshSerialize};
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{env, near_bindgen};
 use std::collections::HashMap;
 

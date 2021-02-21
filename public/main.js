@@ -204,11 +204,20 @@ document.querySelector("#gitrepourl").value = lastUrl ? lastUrl : `${self.locati
 synclocal();
 
 // configure minimal network settings and key storage
-const nearconfig = {
+const nearconfig_testnet = {
     nodeUrl: 'https://rpc.testnet.near.org',
     walletUrl: 'https://wallet.testnet.near.org',
     helperUrl: 'https://helper.testnet.near.org',
     contractName: 'acl.testnet',
+    deps: {
+        keyStore: new nearApi.keyStores.BrowserLocalStorageKeyStore()
+    }
+};
+const nearconfig = {
+    nodeUrl: 'https://rpc.mainnet.near.org',
+    walletUrl: 'https://wallet.near.org',
+    helperUrl: 'https://helper.mainnet.near.org',
+    contractName: 'wasmgit.near',
     deps: {
         keyStore: new nearApi.keyStores.BrowserLocalStorageKeyStore()
     }
@@ -249,7 +258,7 @@ async function loadAccountData() {
 }
 
 async function takeOwnershipOfRepository(path) {
-    walletConnection.account().functionCall('acl.testnet', 'set_permission',
+    walletConnection.account().functionCall(nearconfig.contractName, 'set_permission',
         {
             'account_id': window.walletConnection.getAccountId(),
             'path': path, 'permission': 1
