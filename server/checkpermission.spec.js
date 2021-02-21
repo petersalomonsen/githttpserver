@@ -1,9 +1,11 @@
-import { checkPermission, PERMISSION_READER, PERMISSION_CONTRIBUTOR } from './checkpermission.js';
-import {default as nearApi} from 'near-api-js';
+import { checkPermission, PERMISSION_READER, PERMISSION_CONTRIBUTOR, use_testnet } from './checkpermission.js';
+import { default as nearApi } from 'near-api-js';
 import * as assert from 'assert';
 
 const networkId = 'testnet';
 const testAccountName = 'wasmgitunittest.testnet';
+
+use_testnet();
 
 async function setUpTestConnection() {
     const keyStore = new nearApi.keyStores.InMemoryKeyStore();
@@ -21,7 +23,7 @@ async function setUpTestConnection() {
     return nearApi.connect(config);
 }
 
-describe('checkpermission', function() {
+describe('checkpermission', function () {
     this.timeout(20000);
     it('should allow anonymous reads for the default test repository', async () => {
         assert.equal((await checkPermission('test', 'ANONYMOUS')).permission, PERMISSION_READER);
@@ -29,11 +31,11 @@ describe('checkpermission', function() {
     it('should allow write access for any authenticated user on the default test repo', async () => {
         const near = await setUpTestConnection();
         const testAccount = await near.account(testAccountName);
-        
-        const tokenMessage = Buffer.from(JSON.stringify({accountId: testAccount.accountId, iat: new Date().getTime()})).toString('base64');
+
+        const tokenMessage = Buffer.from(JSON.stringify({ accountId: testAccount.accountId, iat: new Date().getTime() })).toString('base64');
 
         const signature = await testAccount.connection.signer
-                .signMessage(new TextEncoder().encode(tokenMessage), testAccount.accountId, networkId);
+            .signMessage(new TextEncoder().encode(tokenMessage), testAccount.accountId, networkId);
 
         const accessToken = tokenMessage + '.' + Buffer.from(signature.signature).toString('base64');
         assert.equal((await checkPermission('test', accessToken)).permission, PERMISSION_CONTRIBUTOR);
