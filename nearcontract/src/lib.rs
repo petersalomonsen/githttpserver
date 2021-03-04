@@ -15,6 +15,7 @@ const PERMISSION_FREE: Permission = 0x08;
 static EVERYONE: &str = "EVERYONE";
 pub type InvitationId = u64;
 
+const INVITATIONS_KEY: &[u8] = b"INVITATIONS";
 
 // add the following attributes to prepare your code for serialization and invocation on the blockchain
 // More built-in Rust attributes here: https://doc.rust-lang.org/reference/attributes.html#built-in-attributes-index
@@ -26,11 +27,15 @@ pub struct Invitation {
     signingkey: Vec<u8>
 }
 
+#[derive(Default, BorshDeserialize, BorshSerialize)]
+pub struct Invitations {
+    invitations: HashMap<InvitationId, Invitation>
+}
+
 #[near_bindgen]
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct RepositoryPermission {
-    permission: HashMap<String, HashMap<String, Permission>>,
-    invitations: HashMap<InvitationId, Invitation>,    
+    permission: HashMap<String, HashMap<String, Permission>>
 }
 
 #[near_bindgen]
@@ -79,17 +84,30 @@ impl RepositoryPermission {
         }
     }
 
-    pub fn invite(&mut self, invitationid: InvitationId, path: String, permission: Permission) -> bool {
-        if self.invitations.contains_key(&invitationid) {
+    fn load_invitations(&self) -> Invitations {
+        return env::storage_read(INVITATIONS_KEY)
+                    .map(|data| Invitations::try_from_slice(&data).expect("Cannot deserialize the invitations."))
+                    .unwrap_or_default();
+    }
+
+    fn save_invitations(&self, invitations: Invitations) {
+        env::storage_write(INVITATIONS_KEY, &invitations.try_to_vec().expect("Cannot serialize invitations."));
+    }
+
+    pub fn invite(&mut self, invitationid: InvitationId, path: String, permission: Permission) -> bool {        
+        let mut invitations = self.load_invitations();
+        
+        if invitations.invitations.contains_key(&invitationid) {
             panic!("Invitation ID already taken");
         }
         let caller_account_id = env::signer_account_id();
         if self.get_permission(caller_account_id, path.to_string()) == PERMISSION_OWNER {
-            self.invitations.insert(invitationid, Invitation {
+            invitations.invitations.insert(invitationid, Invitation {
                 permission: permission,
                 path: path,
                 signingkey: env::signer_account_pk()
             });
+            self.save_invitations(invitations);
             return true;
         } else {
             panic!("You are not the owner of the path");
@@ -98,7 +116,8 @@ impl RepositoryPermission {
 
     pub fn redeem_invitation(&mut self, invitationid: InvitationId, invitationpayload: String, signature: String) -> bool {
         let caller_account_id = env::signer_account_id();
-        let invitation = self.invitations.get(&invitationid).unwrap();
+        let mut invitations = self.load_invitations();
+        let invitation = invitations.invitations.get(&invitationid).unwrap();
 
         let pk = DalekPK::from_bytes(&invitation.signingkey).unwrap();        
         let sig = DalekSig::from_bytes(base64::decode(&signature).unwrap().as_slice()).unwrap();
@@ -111,7 +130,8 @@ impl RepositoryPermission {
         path_users.insert(caller_account_id, invitation.permission);
         self.permission.insert(invitation.path.to_string(), path_users);
 
-        self.invitations.remove(&invitationid);
+        invitations.invitations.remove(&invitationid);
+        self.save_invitations(invitations);
         return true;
     }
 }
