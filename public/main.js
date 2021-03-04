@@ -33,7 +33,38 @@ window.newRepository = async function () {
         <button onclick="getRootNode().result(getRootNode().querySelector('input').value)">create</button>
     `);
     if (repositoryName) {
-        await takeOwnershipOfRepository(repositoryName);
+        await setPermission(repositoryName, 'owner');
+    }
+}
+
+window.setPermissionForRepo = async function () {
+    const repoUrl = document.querySelector("#gitrepourl").value;
+    const repoName = repoUrl.substring(repoUrl.lastIndexOf('/') + 1);
+    const formdata = await modal(`
+        <h3>Set permission for repository</h3>
+        <p>Set the permissions to repository "${repoName}"" for given user</p>
+        <ul>
+            <li>You will be charged 0.1N</li>        
+        </ul>
+        <form>
+        <p><input name="accountId" type="text" placeholder="near account id"></p>
+        <p>
+        <select name="permission">
+            <option>owner</option>
+            <option>contributor</option>
+            <option>reader</option>
+            <option>none</option>
+        </select>
+        </p>
+        </form>
+        <button onclick="getRootNode().result(null)">cancel</button>
+        <button onclick="getRootNode().result(new FormData(getRootNode().querySelector('form')))">update</button>
+    `);
+    if (formdata) {
+        const accountId = formdata.get("accountId");
+        const permission = formdata.get("permission");
+        
+        await setPermission(repoName, permission, accountId);
     }
 }
 
@@ -293,11 +324,18 @@ async function loadAccountData() {
     });
 }
 
-async function takeOwnershipOfRepository(path) {
+async function setPermission(path, permission, accountId) {
+    const permissionmap = {
+        'none': 0x00,
+        'owner': 0x01,
+        'contributor': 0x02,
+        'reader': 0x04
+    };
+    
     walletConnection.account().functionCall(nearconfig.contractName, 'set_permission',
         {
-            'account_id': window.walletConnection.getAccountId(),
-            'path': path, 'permission': 1
+            'account_id': accountId ? accountId : window.walletConnection.getAccountId(),
+            'path': path, 'permission': permissionmap[permission]
         }
         , null, new BN('100000000000000000000000', 10));
 }

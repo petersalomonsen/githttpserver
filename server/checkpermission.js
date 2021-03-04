@@ -13,7 +13,7 @@ let nearconfig = {
     helperUrl: 'https://helper.mainnet.near.org',
     contractName: 'wasmgit.near',
     deps: {
-        keyStore: new nearApi.keyStores.UnencryptedFileSystemKeyStore()
+        keyStore: new nearApi.keyStores.InMemoryKeyStore()
     }
 };
 
@@ -27,7 +27,7 @@ export function use_testnet() {
         helperUrl: 'https://helper.testnet.near.org',
         contractName: 'acl.testnet',
         deps: {
-            keyStore: new nearApi.keyStores.UnencryptedFileSystemKeyStore()
+            keyStore: new nearApi.keyStores.InMemoryKeyStore()
         }
     };
 }
