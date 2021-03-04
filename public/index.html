@@ -185,79 +185,77 @@
     </style>
 </head>
 
-<body>
-    <div class="maingrid">
-        <div id="header">
-            <div class="menutogglebutton" onclick="toggleMenu(this)">
-                <div class="menutogglebuttonbar1"></div>
-                <div class="menutogglebuttonbar2"></div>
-                <div class="menutogglebuttonbar3"></div>
-            </div>
-            <span style="flex-grow: 1"></span>
-            <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
-            <span id="currentuserspan"></span>
+<body class="maingrid">
+    <div id="header">
+        <div class="menutogglebutton" onclick="toggleMenu(this)">
+            <div class="menutogglebuttonbar1"></div>
+            <div class="menutogglebuttonbar2"></div>
+            <div class="menutogglebuttonbar3"></div>
         </div>
-        <div id="sidemenu">
-            <ul>
+        <span style="flex-grow: 1"></span>
+        <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
+        <span id="currentuserspan"></span>
+    </div>
+    <div id="sidemenu">
+        <ul>
 
-                <li onclick="openEditor()">New file</li>
-                <li onclick="gitcommand('pull')">Pull</li>
-                <li onclick="gitcommand('push')">Push</li>
-                <li onclick="gitcommand('log')">Log</li>
-                <li onclick="gitcommand('status')">Status</li>
-                <li onclick="clearconsole()">Clear output</li>
-                <li onclick="terminalconfig()">Terminal config</li>
-                <li onclick="deletelocal()">Delete local clone</li>
-                <li style="height: 15px;"></li>
+            <li onclick="openEditor()">New file</li>
+            <li onclick="gitcommand('pull')">Pull</li>
+            <li onclick="gitcommand('push')">Push</li>
+            <li onclick="gitcommand('log')">Log</li>
+            <li onclick="gitcommand('status')">Status</li>
+            <li onclick="clearconsole()">Clear output</li>
+            <li onclick="deletelocal()">Delete local clone</li>
+            <li style="height: 15px;"></li>
 
-                <li onclick="newRepository()">New repository</li>
-            </ul>
+            <li onclick="newRepository()">New repository</li>
+            <li onclick="setPermissionForRepo()">Set permissions</li>
+        </ul>
+    </div>
+    <div id="contentarea">
+        <h1>GIT for offline web-app storage</h1>
+        <p>
+            <a target="_blank" href="https://github.com/petersalomonsen/wasm-git">Wasm-git</a>
+            makes it possible to use GIT for offline (in-browser) web-app storage.
+            This site provides a git-server without CORS restrictions that can be used for synchronizing
+            git repositories used in web-apps.
+        </p>
+
+        <p>
+            For more information about this git server, check out the <a target="_blank"
+                href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
+        </p>
+        <div style="display: flex">
+            <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
+            <button onclick="clone()" id="clonebutton">Clone</button>
         </div>
-        <div id="contentarea">
-            <h1>GIT for offline web-app storage</h1>
-            <p>            
-                <a target="_blank" href="https://github.com/petersalomonsen/wasm-git">Wasm-git</a>
-                makes it possible to use GIT for offline (in-browser) web-app storage. 
-                This site provides a git-server without CORS restrictions that can be used for synchronizing 
-                git repositories used in web-apps.
-            </p>
-
-            <p>
-                For more information about this git server, check out the <a target="_blank"
-                    href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
-            </p>
-            <div style="display: flex">
-                <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
-                <button onclick="clone()" id="clonebutton">Clone</button>
+        <br />
+        <br />
+        <template id="dircontentline">
+            <div style="display: flex;">
+                <a id="filename" style="flex-grow: 1; text-overflow: ellipsis;" href="#"
+                    onclick="event.preventDefault();opendirentry(this.innerHTML)"></a>
+                <button id="editbutton">edit</button>
             </div>
-            <br />
-            <br />
-            <template id="dircontentline">
-                <div style="display: flex;">
-                    <a id="filename" style="flex-grow: 1; text-overflow: ellipsis;" href="#"
-                        onclick="event.preventDefault();opendirentry(this.innerHTML)"></a>
-                    <button id="editbutton">edit</button>
-                </div>
-            </template>
-            <div id="dircontents">
-            </div>
+        </template>
+        <div id="dircontents">
+        </div>
 
-            <br />
-            <br />
+        <br />
+        <br />
+
+    </div>
+    <div id="console">
+        <div id="consolecontent">
 
         </div>
-        <div id="console">
-            <div id="consolecontent">
-
-            </div>
-            <div id="consoletoggle" onclick="toggleConsoleHeight()">
-                <i class="arrow up"></i>
-            </div>
+        <div id="consoletoggle" onclick="toggleConsoleHeight()">
+            <i class="arrow up"></i>
         </div>
     </div>
+    </div>
     <template id="editortemplate">
-        <div id="editor" style="
-                    display: flex;
+        <div id="editor" style="display: flex;
                     flex-direction: column;
                     position: absolute;
                     top: 0px;
