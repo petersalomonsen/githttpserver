@@ -1,28 +1,42 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen};
+use near_sdk::{env, near_bindgen, base64};
+use ed25519_dalek::{{PublicKey as DalekPK}};
+use ed25519_dalek::ed25519::signature::Signature as DalekSig;
 use std::collections::HashMap;
 
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-const PERMISSION_OWNER: u32 = 0x01; // Can create
-const PERMISSION_CONTRIBUTOR: u32 = 0x02;
-const PERMISSION_READER: u32 = 0x04;
-const PERMISSION_FREE: u32 = 0x08;
+pub type Permission = u32;
+const PERMISSION_OWNER: Permission = 0x01; // Can create
+const PERMISSION_CONTRIBUTOR: Permission = 0x02;
+const PERMISSION_READER: Permission = 0x04;
+const PERMISSION_FREE: Permission = 0x08;
 static EVERYONE: &str = "EVERYONE";
+pub type InvitationId = u64;
+
 
 // add the following attributes to prepare your code for serialization and invocation on the blockchain
 // More built-in Rust attributes here: https://doc.rust-lang.org/reference/attributes.html#built-in-attributes-index
+
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct Invitation {
+    path: String,
+    permission: Permission,
+    signingkey: Vec<u8>
+}
+
 #[near_bindgen]
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct RepositoryPermission {
-    permission: HashMap<String, HashMap<String, u32>>,
+    permission: HashMap<String, HashMap<String, Permission>>,
+    invitations: HashMap<InvitationId, Invitation>,    
 }
 
 #[near_bindgen]
 impl RepositoryPermission {
     #[payable]
-    pub fn set_permission(&mut self, path: String, account_id: String, permission: u32) -> bool {
+    pub fn set_permission(&mut self, path: String, account_id: String, permission: Permission) -> bool {
         assert_eq!(
             10u128.pow(23),
             env::attached_deposit(),
@@ -37,7 +51,7 @@ impl RepositoryPermission {
             self.permission.insert(path.to_string(), path_users);
             return true;
         } else if current_permission & (PERMISSION_FREE) > 0 {
-            let mut path_users: HashMap<String, u32> = HashMap::new();
+            let mut path_users: HashMap<String, Permission> = HashMap::new();
             path_users.insert(account_id, permission);
             self.permission.insert(path.to_string(), path_users);
             return true;
@@ -46,7 +60,7 @@ impl RepositoryPermission {
         }
     }
 
-    pub fn get_permission(&self, account_id: String, path: String) -> u32 {
+    pub fn get_permission(&self, account_id: String, path: String) -> Permission {
         let path_users = self.permission.get(&path.to_string());
         if path_users.is_some() {
             let permission = path_users.unwrap().get(&account_id);
@@ -63,6 +77,42 @@ impl RepositoryPermission {
         } else {
             return PERMISSION_FREE;
         }
+    }
+
+    pub fn invite(&mut self, invitationid: InvitationId, path: String, permission: Permission) -> bool {
+        if self.invitations.contains_key(&invitationid) {
+            panic!("Invitation ID already taken");
+        }
+        let caller_account_id = env::signer_account_id();
+        if self.get_permission(caller_account_id, path.to_string()) == PERMISSION_OWNER {
+            self.invitations.insert(invitationid, Invitation {
+                permission: permission,
+                path: path,
+                signingkey: env::signer_account_pk()
+            });
+            return true;
+        } else {
+            panic!("You are not the owner of the path");
+        }
+    }
+
+    pub fn redeem_invitation(&mut self, invitationid: InvitationId, invitationpayload: String, signature: String) -> bool {
+        let caller_account_id = env::signer_account_id();
+        let invitation = self.invitations.get(&invitationid).unwrap();
+
+        let pk = DalekPK::from_bytes(&invitation.signingkey).unwrap();        
+        let sig = DalekSig::from_bytes(base64::decode(&signature).unwrap().as_slice()).unwrap();
+
+        if !pk.verify_strict(invitationpayload.as_bytes(), &sig).is_ok() {
+            panic!("Invalid signature");
+        }
+        
+        let mut path_users = self.permission.get(&invitation.path).unwrap().clone();
+        path_users.insert(caller_account_id, invitation.permission);
+        self.permission.insert(invitation.path.to_string(), path_users);
+
+        self.invitations.remove(&invitationid);
+        return true;
     }
 }
 
@@ -94,7 +144,7 @@ mod tests {
             epoch_height: 0,
             current_account_id: "alice_near".to_string(),
             signer_account_id: signer_account_id.to_string(),
-            signer_account_pk: vec![0, 1, 2],
+            signer_account_pk: vec![50, 244, 14, 90, 35, 204, 31, 37, 39, 90, 135, 27, 56, 245, 9, 118, 202, 84, 156, 115, 61, 112, 155, 149, 141, 129, 213, 241, 75, 17, 24, 104],
             predecessor_account_id: "jane_near".to_string(),
             input,
             block_index: 0,
@@ -341,6 +391,123 @@ mod tests {
                 "testrepo".to_string(),
                 "peter".to_string(),
                 PERMISSION_OWNER,
+            );
+        }));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invite_and_redeem_invitation() {
+        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
+        testing_env!(context);
+        let mut contract = RepositoryPermission::default();
+        let path = "lalala";
+        contract.set_permission(
+            path.to_string(),
+            "peter".to_string(),
+            PERMISSION_OWNER
+        );
+        contract.invite(222, path.to_string(), PERMISSION_READER);
+        let recipient_account_id = "someotheruser";
+        testing_env!(get_context(
+            recipient_account_id.to_string(),
+            vec![],
+            false,
+            0,
+        ));
+        contract.redeem_invitation(
+                222 as u64,
+                "hello".to_string(),
+                "BPj2OnsMcYkyOiNC+ZvhAzP5CBo1IMPpZl5f7yepFAYkP5i9VUZxJkJ0qsWg3ZEF1pv56KYPQePwEuBQuzEJDQ==".to_string()
+            );
+        assert_eq!(PERMISSION_READER, contract.get_permission(recipient_account_id.to_string(),path.to_string()));
+    }
+
+    #[test]
+    fn invite_without_ownership() {
+        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
+        testing_env!(context);
+        let mut contract = RepositoryPermission::default();
+        let path = "lalala";
+        contract.set_permission(
+            path.to_string(),
+            "peter".to_string(),
+            PERMISSION_CONTRIBUTOR
+        );
+        
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            return contract.invite(222, path.to_string(), PERMISSION_READER);
+        }));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invite_invalid_signature() {
+        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
+        testing_env!(context);
+        let mut contract = RepositoryPermission::default();
+        let path = "lalala";
+        contract.set_permission(
+            path.to_string(),
+            "peter".to_string(),
+            PERMISSION_OWNER
+        );
+        contract.invite(222, path.to_string(), PERMISSION_READER);
+        let recipient_account_id = "someotheruser";
+        testing_env!(get_context(
+            recipient_account_id.to_string(),
+            vec![],
+            false,
+            0,
+        ));
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            return contract.redeem_invitation(
+                222 as u64,
+                "hellothere".to_string(),
+                "BPj2OnsMcYkyOiNC+ZvhAzP5CBo1IMPpZl5f7yepFAYkP5i9VUZxJkJ0qsWg3ZEF1pv56KYPQePwEuBQuzEJDQ==".to_string()
+            );
+        }));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn invite_and_redeem_invitation_twice() {
+        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
+        testing_env!(context);
+        let mut contract = RepositoryPermission::default();
+        let path = "lalala";
+        contract.set_permission(
+            path.to_string(),
+            "peter".to_string(),
+            PERMISSION_OWNER
+        );
+        contract.invite(222, path.to_string(), PERMISSION_READER);
+        let mut recipient_account_id = "someotheruser";
+        testing_env!(get_context(
+            recipient_account_id.to_string(),
+            vec![],
+            false,
+            0,
+        ));
+        contract.redeem_invitation(
+                222 as u64,
+                "hello".to_string(),
+                "BPj2OnsMcYkyOiNC+ZvhAzP5CBo1IMPpZl5f7yepFAYkP5i9VUZxJkJ0qsWg3ZEF1pv56KYPQePwEuBQuzEJDQ==".to_string()
+            );
+        assert_eq!(PERMISSION_READER, contract.get_permission(recipient_account_id.to_string(),path.to_string()));
+
+        recipient_account_id = "andanotheruser";
+        testing_env!(get_context(
+            recipient_account_id.to_string(),
+            vec![],
+            false,
+            0,
+        ));
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            contract.redeem_invitation(
+                222 as u64,
+                "hello".to_string(),
+                "BPj2OnsMcYkyOiNC+ZvhAzP5CBo1IMPpZl5f7yepFAYkP5i9VUZxJkJ0qsWg3ZEF1pv56KYPQePwEuBQuzEJDQ==".to_string()
             );
         }));
         assert!(result.is_err());

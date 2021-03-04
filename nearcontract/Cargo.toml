@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 near-sdk = "2.0.1"
 wee_alloc = "0.4.5"
+ed25519-dalek = "1.0.1"
 
 [profile.release]
 codegen-units = 1
