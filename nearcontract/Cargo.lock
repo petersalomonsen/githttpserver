@@ -493,6 +493,7 @@ dependencies = [
 name = "rust-simple-access-control"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "ed25519-dalek",
  "near-sdk",
  "wee_alloc",
