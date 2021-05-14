@@ -237,6 +237,41 @@ window.logout = async function () {
     await walletConnection.requestSignOut();
 }
 
+window.terminalconfig = async () => {
+    if (!walletConnection.getAccountId()) {
+        await modal(`<h3>Requires login</h3>
+        <p>Creating credentials for terminal git requires a logged in user.</p>
+        <button onclick="getRootNode().result(null)">Close</button>
+        `);
+        return;
+    }
+
+    const accessToken = await createAccessToken();
+    await modal(`    
+        <h3>Clone</h3>
+        <div style="display: flex;">
+            <pre><code id="clonesnippet">git clone -c http.extraheader="Authorization: Bearer ${accessToken}" ${document.querySelector("#gitrepourl").value}</code></pre>
+            <button style="font-size: 14px" onclick="getRootNode().copyToClipboard('clonesnippet')">Copy</button>
+        </div>
+        <h3>Configure token in existing cloned repo</h3>
+        <div style="display: flex;">
+            <pre><code id="configsnippet">git config http.extraheader "Authorization: Bearer ${accessToken}"</code></pre>
+            <button style="font-size: 14px" onclick="getRootNode().copyToClipboard('configsnippet')">Copy</button>
+        </div>
+        <p style="color: white">The generated token is valid for 24 hours</p>
+        <button onclick="getRootNode().result(null)">Close</button>
+    `);
+};
+
+async function createAccessToken() {
+    const accountId = walletConnection.getAccountId();
+    const tokenMessage = btoa(JSON.stringify({ accountId: accountId, iat: new Date().getTime() }));
+    const signature = await walletConnection.account()
+        .connection.signer
+        .signMessage(new TextEncoder().encode(tokenMessage), accountId);
+    return tokenMessage + '.' + btoa(String.fromCharCode(...signature.signature));
+}
+
 async function loadAccountData() {
     let currentUser = {
         accountId: walletConnection.getAccountId(),
@@ -251,7 +286,7 @@ async function loadAccountData() {
         );
 
     worker.postMessage({
-        accessToken: tokenMessage + '.' + btoa(String.fromCharCode(...signature.signature)),
+        accessToken: await createAccessToken(),
         useremail: currentUser.accountId,
         username: currentUser.accountId
     });
