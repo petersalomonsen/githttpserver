@@ -4,13 +4,6 @@
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <style>
-        html,
-        body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-        }
-
         * {
             font-family: monospace;
             font-size: 16px;
@@ -38,12 +31,18 @@
                 'header header'
                 'menu main'
                 'menu footer';
-            grid-template-columns: auto auto;
+            grid-template-columns: minmax(auto, 200px) auto;
             grid-template-rows: 50px auto 100px;
             transition: all 0.2s;
             margin: 0px;
             color: #020;
             background-color: #ddd;
+            overflow: hidden;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
         }
 
         #header {
@@ -75,7 +74,6 @@
             grid-area: menu;
             z-index: 1000;
             transition: all 0.2s;
-            width: 0px;
         }
 
         #sidemenu li {
@@ -187,88 +185,74 @@
     </style>
 </head>
 
-<body class="maingrid">
-    <div id="header">
-        <div class="menutogglebutton" onclick="toggleMenu(this)">
-            <div class="menutogglebuttonbar1"></div>
-            <div class="menutogglebuttonbar2"></div>
-            <div class="menutogglebuttonbar3"></div>
-        </div>
-        <span style="flex-grow: 1"></span>
-        <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
-        <span id="currentuserspan"></span>
-    </div>
-    <div id="sidemenu">
-        <ul>
-
-            <li onclick="openEditor()">New file</li>
-            <li onclick="gitcommand('pull')">Pull</li>
-            <li onclick="gitcommand('push')">Push</li>
-            <li onclick="gitcommand('log')">Log</li>
-            <li onclick="gitcommand('status')">Status</li>
-            <li onclick="clearconsole()">Clear output</li>
-            <li onclick="deletelocal()">Delete local clone</li>
-            <li style="height: 15px;"></li>
-
-            <li onclick="newRepository()">New repository</li>
-        </ul>
-    </div>
-    <div id="contentarea">
-        <h1>GIT in the browser</h1>
-        <p>
-            <em>
-                A demonstration of the <a target="_blank"
-                    href="https://github.com/petersalomonsen/wasm-git">WASM-git</a> project.
-                This is open for testing and demo purposes only.
-                <b>Use at own risk (data may be lost and don't store personal data), and please don't abuse!</b>
-            </em>
-        </p>
-        <p>
-            When cloning using WASM-git the git repository is persisted in your browser using the
-            <a target="_blank"
-                href="https://emscripten.org/docs/api_reference/Filesystem-API.html#filesystem-api-idbfs">Emscripten
-                IDBFS</a>.
-            This simple demo app lets you create and edit files, you can pull updates from the server,
-            and if you log in you can also push to the demo server. Using <a target="_blank"
-                href="https://near.org/">NEAR protocol</a> for authentication and access control.
-        </p>
-        <p>Because of <a target="_blank" href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">CORS</a> you
-            cannot
-            type any git server address in the field below, unless it's open for cross origin resource sharing. A
-            workaround
-            is to set up a <a target="_blank"
-                href="https://github.com/petersalomonsen/wasm-git/blob/master/examples/webserverwithgithubproxy.js">proxy</a>.
-        </p>
-        <p>
-            For more information about this demo, check out the <a target="_blank"
-                href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
-        </p>
-        <div style="display: flex">
-            <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
-            <button onclick="clone()" id="clonebutton">Clone</button>
-        </div>
-        <br />
-        <br />
-        <template id="dircontentline">
-            <div style="display: flex;">
-                <a id="filename" style="flex-grow: 1; text-overflow: ellipsis;" href="#"
-                    onclick="event.preventDefault();opendirentry(this.innerHTML)"></a>
-                <button id="editbutton">edit</button>
+<body>
+    <div class="maingrid">
+        <div id="header">
+            <div class="menutogglebutton" onclick="toggleMenu(this)">
+                <div class="menutogglebuttonbar1"></div>
+                <div class="menutogglebuttonbar2"></div>
+                <div class="menutogglebuttonbar3"></div>
             </div>
-        </template>
-        <div id="dircontents">
+            <span style="flex-grow: 1"></span>
+            <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
+            <span id="currentuserspan"></span>
         </div>
+        <div id="sidemenu">
+            <ul>
 
-        <br />
-        <br />
+                <li onclick="openEditor()">New file</li>
+                <li onclick="gitcommand('pull')">Pull</li>
+                <li onclick="gitcommand('push')">Push</li>
+                <li onclick="gitcommand('log')">Log</li>
+                <li onclick="gitcommand('status')">Status</li>
+                <li onclick="clearconsole()">Clear output</li>
+                <li onclick="terminalconfig()">Terminal config</li>
+                <li onclick="deletelocal()">Delete local clone</li>
+                <li style="height: 15px;"></li>
 
-    </div>
-    <div id="console">
-        <div id="consolecontent">
+                <li onclick="newRepository()">New repository</li>
+            </ul>
+        </div>
+        <div id="contentarea">
+            <h1>GIT for offline web-app storage</h1>
+            <p>            
+                <a target="_blank" href="https://github.com/petersalomonsen/wasm-git">Wasm-git</a>
+                makes it possible to use GIT for offline (in-browser) web-app storage. 
+                This site provides a git-server without CORS restrictions that can be used for synchronizing 
+                git repositories used in web-apps.
+            </p>
+
+            <p>
+                For more information about this git server, check out the <a target="_blank"
+                    href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
+            </p>
+            <div style="display: flex">
+                <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
+                <button onclick="clone()" id="clonebutton">Clone</button>
+            </div>
+            <br />
+            <br />
+            <template id="dircontentline">
+                <div style="display: flex;">
+                    <a id="filename" style="flex-grow: 1; text-overflow: ellipsis;" href="#"
+                        onclick="event.preventDefault();opendirentry(this.innerHTML)"></a>
+                    <button id="editbutton">edit</button>
+                </div>
+            </template>
+            <div id="dircontents">
+            </div>
+
+            <br />
+            <br />
 
         </div>
-        <div id="consoletoggle" onclick="toggleConsoleHeight()">
-            <i class="arrow up"></i>
+        <div id="console">
+            <div id="consolecontent">
+
+            </div>
+            <div id="consoletoggle" onclick="toggleConsoleHeight()">
+                <i class="arrow up"></i>
+            </div>
         </div>
     </div>
     <template id="editortemplate">

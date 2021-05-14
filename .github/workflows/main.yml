@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  detectonly:
+    name: Detect use of .only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Detect use of .only
+        run: |
+          grep -rq --include '*.spec.js' \.only\( . && echo 'You have .only() in your tests!' && exit 1
+          exit 0
+  server:
+    name: NodeJS server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: NodeJS
+        run: |
+          npm install
+          npm test
+  chromeheadless:
+    name: Chrome headless
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Chrome headless
+        run: |
+          npm install
+          npm run test-browser
+  firefoxxvfb:
+    name: Access control contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Rust smart contract for access control
+        run: |
+          cd nearcontract
+          cargo test --package rust-simple-access-control -- --nocapture

@@ -1,5 +1,6 @@
 describe('libgit2 webworker', function () {
-    it.only('should be able to send token to the worker without waiting for ready message', async () => {
+    this.timeout(10000);
+    it('should receive confirmation that access token was configured in webworker', async () => {
         const worker = new Worker('libgit2_webworker.js');
         const replyPromise = new Promise(resolve =>
             worker.onmessage = (msg) => resolve(msg)

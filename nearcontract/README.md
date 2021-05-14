@@ -9,7 +9,7 @@ Using near-cli (testnet):
 
 mainnet:
 
-`near call wasmgit.near set_permission --amount "0.1" --networkId mainnet --walletUrl https://wallet.near.org --nodeUrl https://rpc.mainnet.near.org --accountId myaccountid.near '{"path": "myrepositorypath", "account_id": "myaccountid.near", "permission": 1}'`
+`NEAR_ENV=mainnet near call wasmgit.near set_permission --amount "0.1" --accountId myaccountid.near '{"path": "myrepositorypath", "account_id": "myaccountid.near", "permission": 1}'`
 
 For creating a repository you need to have the owner permission, see [lib.rs](src/lib.rs) for a list of permission bit values.
 
