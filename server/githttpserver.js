@@ -9,6 +9,7 @@ import { createServer } from 'http';
 import { exists, readFile, mkdir } from 'fs';
 import { exec } from 'child_process';
 import * as cgi from 'cgi';
+import { checkIfQuotaIsExceeded } from './quota.js';
 
 function createCGI(accountId) {
     return cgi.default('git', {args: ['http-backend'],
@@ -49,8 +50,8 @@ createServer(async (request, response) => {
             );
             // Invoke git            
             if (permission & (PERMISSION_OWNER | PERMISSION_CONTRIBUTOR | PERMISSION_FREE)) {
-                if (permission & (PERMISSION_OWNER)) {
-                    const repodir = `${process.env.GIT_PROJECT_ROOT}/${repository}`;
+                const repodir = `${process.env.GIT_PROJECT_ROOT}/${repository}`;
+                if (permission & (PERMISSION_OWNER)) {                    
                     // Create repo if not exists
                     if (!await new Promise(resolve =>
                             exists(repodir, res => resolve(res)))
@@ -59,6 +60,12 @@ createServer(async (request, response) => {
                         await new Promise(resolve => exec(`git init --bare ${repodir}`, (res) => resolve(res)));
                         console.log(`Created repository ${repository} for owner ${accountId}`);
                     }
+                }
+                if (request.url.indexOf('git-receive') > -1 && request.method === 'POST'
+                    && await checkIfQuotaIsExceeded(repodir)) {                    
+                    response.statusCode = 413;
+                    response.end("storage quota exceeded");
+                    return;                    
                 }
                 // Read and write permission
                 createCGI(accountId)(request, response);
