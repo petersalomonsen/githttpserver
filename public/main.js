@@ -22,12 +22,13 @@ window.newRepository = async function () {
         <h3>Reserve repository name</h3>
         <p>This will set your account as the owner of the repository with the specified name,
         provided it's not already taken.</p>
-        <ul>
-            <li>You will be charged 0.1N</li>
-            <li>Your data is NOT encrypted on the server</li>
-            <li>This is just a test/demo and may be removed at any time without notice</li>
+        <ul style="color: white; text-align: left">
+            <li>You will be charged 0.1N for the name (storage is not included)</li>
+            <li>Keep your repositories small (max 10MB)</li>
+            <li>Storage costs may be introduced in the future</li>
+            <li>Repositories stored on the server may be deleted, so keep a backup on your own (clone using a terminal)</li>
         </ul>
-        <p><input type="text" placeholder="repository name"></p>
+        <p><input style="font-size: 18px; width: 100%;" type="text" placeholder="enter repository name"></p>
         <button onclick="getRootNode().result(null)">cancel</button>
         <button onclick="getRootNode().result(getRootNode().querySelector('input').value)">create</button>
     `);

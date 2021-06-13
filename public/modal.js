@@ -6,7 +6,7 @@ const modalTemplate = (modalcontent) => `<style>
         margin: auto;
         text-align: center;
         padding: 20px;
-        background-color: rgba(0, 0, 0, 0.8);
+        background-color: rgba(0, 0, 0, 0.9);
         border: #4a4 solid 5px;
         color: #4a4;
         font-family: monospace;
