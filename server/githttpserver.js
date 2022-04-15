@@ -12,14 +12,15 @@ import * as cgi from 'cgi';
 import { checkIfQuotaIsExceeded } from './quota.js';
 
 function createCGI(accountId) {
-    return cgi.default('git', {args: ['http-backend'],
-                    stderr: process.stderr,
-                    env: {
-                        'GIT_PROJECT_ROOT': process.env.GIT_PROJECT_ROOT,
-                        'GIT_HTTP_EXPORT_ALL': '1',
-                        'REMOTE_USER': accountId
-                    }
-                });
+    return cgi.default('git', {
+        args: ['http-backend'],
+        stderr: process.stderr,
+        env: {
+            'GIT_PROJECT_ROOT': process.env.GIT_PROJECT_ROOT,
+            'GIT_HTTP_EXPORT_ALL': '1',
+            'REMOTE_USER': accountId
+        }
+    });
 };
 
 const publicdir = `${process.cwd()}/public`;
@@ -27,20 +28,20 @@ const publicdir = `${process.cwd()}/public`;
 createServer(async (request, response) => {
     let path = request.url.substring(1).split(/\?/)[0];
 
-    if(path === '') {
+    if (path === '') {
         path = 'index.html';
     }
 
     response.setHeader("Access-Control-Allow-Origin", "*");
     console.log(request.method, request.url);
 
-    if (request.method==='OPTIONS') {
+    if (request.method === 'OPTIONS') {
         response.setHeader("Access-Control-Allow-Headers", "*");
         response.statusCode = 200;
         response.end();
-    } else if( request.url.indexOf('git-upload') > -1 ||
-            request.url.indexOf('git-receive') > -1) {  
-        
+    } else if (request.url.indexOf('git-upload') > -1 ||
+        request.url.indexOf('git-receive') > -1) {
+
         try {
             const repository = path.split('/')[0];
 
@@ -49,12 +50,12 @@ createServer(async (request, response) => {
                 request.headers.authorization ? request.headers.authorization.substring('Bearer '.length) : 'ANONYMOUS'
             );
             // Invoke git            
-            if (permission & (PERMISSION_OWNER | PERMISSION_CONTRIBUTOR | PERMISSION_FREE)) {
+            if (permission & (PERMISSION_OWNER | PERMISSION_CONTRIBUTOR | PERMISSION_FREE)) {
                 const repodir = `${process.env.GIT_PROJECT_ROOT}/${repository}`;
-                if (permission & (PERMISSION_OWNER)) {                    
+                if (permission & (PERMISSION_OWNER)) {
                     // Create repo if not exists
                     if (!await new Promise(resolve =>
-                            exists(repodir, res => resolve(res)))
+                        exists(repodir, res => resolve(res)))
                     ) {
                         await new Promise(resolve => mkdir(repodir, () => resolve()));
                         await new Promise(resolve => exec(`git init --bare ${repodir}`, (res) => resolve(res)));
@@ -62,14 +63,17 @@ createServer(async (request, response) => {
                     }
                 }
                 if (request.url.indexOf('git-receive') > -1 && request.method === 'POST'
-                    && await checkIfQuotaIsExceeded(repodir)) {                    
-                    response.statusCode = 413;
-                    response.end("storage quota exceeded");
-                    return;                    
+                    && await checkIfQuotaIsExceeded(repodir)) {
+                    await new Promise(resolve => exec(`git gc`, { cwd: repodir }, (res) => resolve(res)));
+                    if (await checkIfQuotaIsExceeded(repodir)) {
+                        response.statusCode = 413;
+                        response.end("storage quota exceeded");
+                        return;
+                    }
                 }
                 // Read and write permission
                 createCGI(accountId)(request, response);
-            } else if(permission) {
+            } else if (permission) {
                 // read only
                 createCGI()(request, response);
             } else {
@@ -77,15 +81,15 @@ createServer(async (request, response) => {
                 response.statusCode = 403;
                 response.end("permission denied");
             }
-        } catch(e) {
+        } catch (e) {
             console.error('invalid token', e);
             response.statusCode = 403;
             response.end("invalid token");
         }
-    } else if(await new Promise(resolve => exists(`${publicdir}/${path}`, res => resolve(res)))) {
-        if (path.indexOf('.js') === path.length-3) {
+    } else if (await new Promise(resolve => exists(`${publicdir}/${path}`, res => resolve(res)))) {
+        if (path.indexOf('.js') === path.length - 3) {
             response.setHeader('Content-Type', 'application/javascript');
-        } else if (path.indexOf('.wasm') === path.length-5) {
+        } else if (path.indexOf('.wasm') === path.length - 5) {
             response.setHeader('Content-Type', 'application/wasm');
         }
         response.end(await new Promise(resolve => readFile(`${publicdir}/${path}`, (err, data) => resolve(data))));
