@@ -21,6 +21,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: NodeJS
         run: |
+          npm i -g near-cli
+          rustup target add wasm32-unknown-unknown
+          (cd nearcontract && ./buildanddeploy.sh)
           npm install
           npm test
   chromeheadless:
