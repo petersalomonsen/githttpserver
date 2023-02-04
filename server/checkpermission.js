@@ -20,12 +20,12 @@ let nearconfig = {
 const permissionCache = {};
 const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000;
 
-export function use_testnet() {
+export function use_testnet(contractName) {
     nearconfig = {
         nodeUrl: 'https://rpc.testnet.near.org',
         walletUrl: 'https://wallet.testnet.near.org',
         helperUrl: 'https://helper.testnet.near.org',
-        contractName: 'acl.testnet',
+        contractName: contractName,
         deps: {
             keyStore: new nearApi.keyStores.InMemoryKeyStore()
         }

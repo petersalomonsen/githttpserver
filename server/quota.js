@@ -1,5 +1,5 @@
 import { exec } from 'child_process';
-export const MAX_REPOSITORY_SIZE = 10 * 1024 * 1024; // Max repository size 10 MB
+export const MAX_REPOSITORY_SIZE = 50 * 1024 * 1024; // Max repository size 10 MB
 
 export async function checkIfQuotaIsExceeded(repodir) {
     const currentSize = (await new Promise(resolve => exec(`du -sh ${repodir}`, (err, stdout) => resolve(stdout)))).split(/\t/)[0];
