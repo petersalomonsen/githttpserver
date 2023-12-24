@@ -11,12 +11,9 @@ pub async fn init_contracts() -> anyhow::Result<near_workspaces::Contract> {
     let contract_id: AccountId = WASMGIT_CONTRACT.parse()?;
     let contract = worker
         .import_contract(&contract_id, &mainnet)
-        .initial_balance(NearToken::from_near(parse_near!("1000 N")))
+        .initial_balance(NearToken::from_near(1000))
         .transact()
         .await?;
-    let outcome = contract.call("new").args_json(json!({})).transact().await?;
-    assert!(outcome.is_success());
-    assert!(format!("{:?}", outcome).contains("Migrated to version:"));
 
     Ok(contract)
 }

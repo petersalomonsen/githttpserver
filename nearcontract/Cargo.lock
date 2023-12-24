@@ -3211,7 +3211,6 @@ dependencies = [
  "near-workspaces",
  "serde_json",
  "tokio",
- "wee_alloc",
 ]
 
 [[package]]

@@ -4,11 +4,8 @@ use ed25519_dalek::Signature as DalekSig;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::PublicKey;
-use near_sdk::{base64, env, near_bindgen};
+use near_sdk::{base64, env, near_bindgen,PanicOnDefault};
 use std::collections::HashMap;
-
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 pub type Permission = u32;
 const PERMISSION_OWNER: Permission = 0x01; // Can create
@@ -41,7 +38,7 @@ pub struct RepositoryPermission {
 }
 
 #[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(PanicOnDefault,BorshDeserialize, BorshSerialize)]
 pub struct RepositoryPermissionV2 {
     permission: LookupMap<String, HashMap<String, Permission>>,
 }

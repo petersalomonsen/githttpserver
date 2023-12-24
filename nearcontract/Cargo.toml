@@ -8,7 +8,6 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-wee_alloc = "0.4.5"
 byteorder= "1.4.2"
 near-sdk = "4.1.1"
 ed25519-dalek = "1.0.1"
