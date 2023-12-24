@@ -33,12 +33,19 @@ async fn test_deploy_contract_self_upgrade() -> anyhow::Result<()> {
 
     let wasm = near_workspaces::compile_project("./").await?;
 
-    let mut contract_upgrade_result = contract
-        .call("unsafe_self_upgrade")
-        .args(wasm)
-        .max_gas()
-        .transact()
-        .await?;
+    let contract_deploy_result = contract.as_account().deploy(wasm.as_slice()).await?;
+    assert!(contract_deploy_result.is_success());
 
+    let get_permission_after_upgrade_result: serde_json::Value = contract
+        .call("get_permission")
+        .args_json(json!({
+            "path": "test",
+            "account_id": "peter"
+        }))
+        .view()
+        .await?
+        .json()?;
+
+    assert_eq!(1, get_permission_after_upgrade_result);
     Ok(())
 }
