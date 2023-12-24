@@ -1,6 +1,4 @@
-use near_units::parse_near;
 use near_workspaces::{AccountId, types::NearToken};
-use serde_json::json;
 
 const WASMGIT_CONTRACT: &str = "wasmgit.near";
 
