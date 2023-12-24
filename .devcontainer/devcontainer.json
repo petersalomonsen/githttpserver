@@ -1,0 +1,12 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/universal",
+    "features": {
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/devcontainers/features/node:1": {}
+    },
+    "customizations": {
+        "vscode": {
+          "extensions": ["rust-lang.rust-analyzer"]
+        }
+      },
+}

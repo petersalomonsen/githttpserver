@@ -1,10 +1,11 @@
-use near_sdk::PublicKey;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, base64};
-use ed25519_dalek::{{PublicKey as DalekPK}};
-use ed25519_dalek::ed25519::signature::Signature as DalekSig;
-use std::collections::HashMap;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use ed25519_dalek::ed25519::signature::Signature as DalekSig;
+use ed25519_dalek::PublicKey as DalekPK;
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::collections::LookupMap;
+use near_sdk::PublicKey;
+use near_sdk::{base64, env, near_bindgen};
+use std::collections::HashMap;
 
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
@@ -19,32 +20,49 @@ pub type InvitationId = u64;
 
 const INVITATIONS_KEY: &[u8] = b"INVITATIONS";
 const INVITATION_ID_KEY: &[u8] = b"INVITATION_ID";
-
-// add the following attributes to prepare your code for serialization and invocation on the blockchain
-// More built-in Rust attributes here: https://doc.rust-lang.org/reference/attributes.html#built-in-attributes-index
+const REPOSITORY_PERMISSION_KEY: &[u8] = b"rp";
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Invitation {
     path: String,
     permission: Permission,
-    signingkey: PublicKey
+    signingkey: PublicKey,
 }
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct Invitations {
-    invitations: HashMap<InvitationId, Invitation>
+    invitations: HashMap<InvitationId, Invitation>,
 }
 
 #[near_bindgen]
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct RepositoryPermission {
-    permission: HashMap<String, HashMap<String, Permission>>
+    permission: HashMap<String, HashMap<String, Permission>>,
 }
 
 #[near_bindgen]
-impl RepositoryPermission {
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct RepositoryPermissionV2 {
+    permission: LookupMap<String, HashMap<String, Permission>>,
+}
+
+#[near_bindgen]
+impl RepositoryPermissionV2 {
+    #[init]
+    pub fn new() -> Self {
+        let contract = Self {
+            permission: LookupMap::new(REPOSITORY_PERMISSION_KEY.to_vec())
+        };
+        contract
+    }
+
     #[payable]
-    pub fn set_permission(&mut self, path: String, account_id: String, permission: Permission) -> bool {
+    pub fn set_permission(
+        &mut self,
+        path: String,
+        account_id: String,
+        permission: Permission,
+    ) -> bool {
         assert_eq!(
             10u128.pow(23),
             env::attached_deposit(),
@@ -56,12 +74,12 @@ impl RepositoryPermission {
         if current_permission & (PERMISSION_OWNER) > 0 {
             let mut path_users = self.permission.get(&path.to_string()).unwrap().clone();
             path_users.insert(account_id, permission);
-            self.permission.insert(path.to_string(), path_users);
+            self.permission.insert(&path.to_string(), &path_users);
             return true;
         } else if current_permission & (PERMISSION_FREE) > 0 {
             let mut path_users: HashMap<String, Permission> = HashMap::new();
             path_users.insert(account_id, permission);
-            self.permission.insert(path.to_string(), path_users);
+            self.permission.insert(&path.to_string(), &path_users);
             return true;
         } else {
             panic!("permission denied");
@@ -71,11 +89,12 @@ impl RepositoryPermission {
     pub fn get_permission(&self, account_id: String, path: String) -> Permission {
         let path_users = self.permission.get(&path.to_string());
         if path_users.is_some() {
-            let permission = path_users.unwrap().get(&account_id);
+            let path_users_unwrapped = path_users.unwrap();
+            let permission = path_users_unwrapped.get(&account_id);
             if permission.is_some() {
                 return *permission.unwrap();
             } else {
-                let everyone_permission = path_users.unwrap().get(EVERYONE);
+                let everyone_permission = path_users_unwrapped.get(EVERYONE);
                 return if everyone_permission.is_some() {
                     *everyone_permission.unwrap()
                 } else {
@@ -89,29 +108,47 @@ impl RepositoryPermission {
 
     fn load_invitations(&self) -> Invitations {
         return env::storage_read(INVITATIONS_KEY)
-                    .map(|data| Invitations::try_from_slice(&data).expect("Cannot deserialize the invitations."))
-                    .unwrap_or_default();
+            .map(|data| {
+                Invitations::try_from_slice(&data).expect("Cannot deserialize the invitations.")
+            })
+            .unwrap_or_default();
     }
 
     fn save_invitations(&self, invitations: Invitations) {
-        env::storage_write(INVITATIONS_KEY, &invitations.try_to_vec().expect("Cannot serialize invitations."));
+        env::storage_write(
+            INVITATIONS_KEY,
+            &invitations
+                .try_to_vec()
+                .expect("Cannot serialize invitations."),
+        );
     }
 
-    pub fn invite(&mut self, path: String, permission: Permission) -> u64 {        
+    pub fn invite(&mut self, path: String, permission: Permission) -> u64 {
         let mut invitations = self.load_invitations();
-        
+
         let invitationidbuf = env::storage_read(INVITATION_ID_KEY);
-        let invitationid = if invitationidbuf.is_some() { invitationidbuf.unwrap().as_slice().read_u64::<BigEndian>().unwrap() } else { 1 };
+        let invitationid = if invitationidbuf.is_some() {
+            invitationidbuf
+                .unwrap()
+                .as_slice()
+                .read_u64::<BigEndian>()
+                .unwrap()
+        } else {
+            1
+        };
 
         let caller_account_id = env::signer_account_id();
         if self.get_permission(caller_account_id, path.to_string()) == PERMISSION_OWNER {
-            invitations.invitations.insert(invitationid, Invitation {
-                permission: permission,
-                path: path,
-                signingkey: env::signer_account_pk()
-            });
+            invitations.invitations.insert(
+                invitationid,
+                Invitation {
+                    permission: permission,
+                    path: path,
+                    signingkey: env::signer_account_pk(),
+                },
+            );
             self.save_invitations(invitations);
-            let mut wtr = vec![];            
+            let mut wtr = vec![];
             wtr.write_u64::<BigEndian>(invitationid + 1).unwrap();
             env::storage_write(INVITATION_ID_KEY, wtr.as_slice());
             return invitationid;
@@ -125,18 +162,19 @@ impl RepositoryPermission {
         let mut invitations = self.load_invitations();
         let invitation = invitations.invitations.get(&invitationid).unwrap();
 
-        let pk = DalekPK::from_bytes(&invitation.signingkey[1..].to_vec()).unwrap();        
+        let pk = DalekPK::from_bytes(&invitation.signingkey[1..].to_vec()).unwrap();
         let sig = DalekSig::from_bytes(base64::decode(&signature).unwrap().as_slice()).unwrap();
 
-        let signedmessage = format!("invitation{}",invitationid);
-        
+        let signedmessage = format!("invitation{}", invitationid);
+
         if !pk.verify_strict(signedmessage.as_bytes(), &sig).is_ok() {
             panic!("Invalid signature");
         }
-        
+
         let mut path_users = self.permission.get(&invitation.path).unwrap().clone();
         path_users.insert(caller_account_id, invitation.permission);
-        self.permission.insert(invitation.path.to_string(), path_users);
+        self.permission
+            .insert(&invitation.path.to_string(), &path_users);
 
         invitations.invitations.remove(&invitationid);
         self.save_invitations(invitations);
@@ -159,7 +197,8 @@ mod tests {
     use near_sdk::{testing_env, VMContext};
 
     const REQUIRED_ATTACHED_DEPOSIT: u128 = 100000000000000000000000;
-    const INVITATION_SIGNATURE: &str = "LtXiPcOxOC8n5/qiICscp3P5Ku8ymC3gj1eYJuq8GFR9co2pZYwbWLBiu5CrtVFtvmeWwMzOIkp4tJaosJ40Dg==";
+    const INVITATION_SIGNATURE: &str =
+        "LtXiPcOxOC8n5/qiICscp3P5Ku8ymC3gj1eYJuq8GFR9co2pZYwbWLBiu5CrtVFtvmeWwMzOIkp4tJaosJ40Dg==";
 
     // part of writing unit tests is setting up a mock context
     // in this example, this is only needed for env::log in the contract
@@ -173,7 +212,10 @@ mod tests {
             epoch_height: 0,
             current_account_id: "alice_near".to_string(),
             signer_account_id: signer_account_id.to_string(),
-            signer_account_pk: vec![00, 66, 211, 21, 84, 20, 241, 129, 29, 118, 83, 184, 41, 215, 240, 117, 106, 56, 29, 69, 103, 43, 191, 167, 199, 102, 3, 16, 194, 250, 138, 198, 78],
+            signer_account_pk: vec![
+                00, 66, 211, 21, 84, 20, 241, 129, 29, 118, 83, 184, 41, 215, 240, 117, 106, 56,
+                29, 69, 103, 43, 191, 167, 199, 102, 3, 16, 194, 250, 138, 198, 78,
+            ],
             predecessor_account_id: "jane_near".to_string(),
             input,
             block_index: 0,
@@ -198,7 +240,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = RepositoryPermission::default();
+        let mut contract = RepositoryPermissionV2::new();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("peter".to_string(), "testrepo".to_string())
@@ -226,7 +268,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = RepositoryPermission::default();
+        let mut contract = RepositoryPermissionV2::new();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("johan".to_string(), "testrepo".to_string())
@@ -274,7 +316,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract: RepositoryPermission = RepositoryPermission::default();
+        let mut contract: RepositoryPermissionV2 = RepositoryPermissionV2::new();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("johan".to_string(), "testrepo".to_string())
@@ -315,7 +357,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = RepositoryPermission::default();
+        let mut contract = RepositoryPermissionV2::new();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("peter".to_string(), "testrepo".to_string())
@@ -360,7 +402,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = RepositoryPermission::default();
+        let mut contract = RepositoryPermissionV2::new();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("peter".to_string(), "testrepo".to_string())
@@ -413,7 +455,7 @@ mod tests {
     fn require_attached_deposits() {
         let context = get_context("peter".to_string(), vec![], false, 2);
         testing_env!(context);
-        let mut contract = RepositoryPermission::default();
+        let mut contract = RepositoryPermissionV2::new();
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             return contract.set_permission(
@@ -427,34 +469,40 @@ mod tests {
 
     #[test]
     fn invite_and_redeem_invitation() {
-        testing_env!(get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT));
-        let mut contract = RepositoryPermission::default();
-        let path = "lalala";
-        contract.set_permission(
-            path.to_string(),
+        testing_env!(get_context(
             "peter".to_string(),
-            PERMISSION_OWNER
-        );
+            vec![],
+            false,
+            REQUIRED_ATTACHED_DEPOSIT
+        ));
+        let mut contract = RepositoryPermissionV2::new();
+        let path = "lalala";
+        contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let invitationid = contract.invite(path.to_string(), PERMISSION_READER);
-        contract.redeem_invitation(
-                invitationid,
-                INVITATION_SIGNATURE.to_string()
-            );
-        assert_eq!(PERMISSION_READER, contract.get_permission("peter".to_string(),path.to_string()));
+        contract.redeem_invitation(invitationid, INVITATION_SIGNATURE.to_string());
+        assert_eq!(
+            PERMISSION_READER,
+            contract.get_permission("peter".to_string(), path.to_string())
+        );
     }
 
     #[test]
     fn invite_without_ownership() {
-        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
+        let context = get_context(
+            "peter".to_string(),
+            vec![],
+            false,
+            REQUIRED_ATTACHED_DEPOSIT,
+        );
         testing_env!(context);
-        let mut contract = RepositoryPermission::default();
+        let mut contract = RepositoryPermissionV2::new();
         let path = "lalala";
         contract.set_permission(
             path.to_string(),
             "peter".to_string(),
-            PERMISSION_CONTRIBUTOR
+            PERMISSION_CONTRIBUTOR,
         );
-        
+
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             return contract.invite(path.to_string(), PERMISSION_READER);
         }));
@@ -463,15 +511,16 @@ mod tests {
 
     #[test]
     fn invite_invalid_signature() {
-        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
-        testing_env!(context);
-        let mut contract = RepositoryPermission::default();
-        let path = "lalala";
-        contract.set_permission(
-            path.to_string(),
+        let context = get_context(
             "peter".to_string(),
-            PERMISSION_OWNER
+            vec![],
+            false,
+            REQUIRED_ATTACHED_DEPOSIT,
         );
+        testing_env!(context);
+        let mut contract = RepositoryPermissionV2::new();
+        let path = "lalala";
+        contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let invitationid = contract.invite(path.to_string(), PERMISSION_READER);
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -485,70 +534,65 @@ mod tests {
 
     #[test]
     fn invite_and_redeem_invitation_twice() {
-        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
-        testing_env!(context);
-        let mut contract = RepositoryPermission::default();
-        let path = "lalala";
-        contract.set_permission(
-            path.to_string(),
+        let context = get_context(
             "peter".to_string(),
-            PERMISSION_OWNER
+            vec![],
+            false,
+            REQUIRED_ATTACHED_DEPOSIT,
         );
+        testing_env!(context);
+        let mut contract = RepositoryPermissionV2::new();
+        let path = "lalala";
+        contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let invitationid = contract.invite(path.to_string(), PERMISSION_READER);
-        
-        contract.redeem_invitation(
-                invitationid,
-                INVITATION_SIGNATURE.to_string()
-            );
-        assert_eq!(PERMISSION_READER, contract.get_permission("peter".to_string(),path.to_string()));
-        
+
+        contract.redeem_invitation(invitationid, INVITATION_SIGNATURE.to_string());
+        assert_eq!(
+            PERMISSION_READER,
+            contract.get_permission("peter".to_string(), path.to_string())
+        );
+
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            contract.redeem_invitation(
-                invitationid,
-                INVITATION_SIGNATURE.to_string()
-            );
+            contract.redeem_invitation(invitationid, INVITATION_SIGNATURE.to_string());
         }));
         assert!(result.is_err());
     }
     #[test]
     fn invite_and_redeem_invitation_old_signature() {
-        let context = get_context("peter".to_string(), vec![], false, REQUIRED_ATTACHED_DEPOSIT);
+        let context = get_context(
+            "peter".to_string(),
+            vec![],
+            false,
+            REQUIRED_ATTACHED_DEPOSIT,
+        );
         testing_env!(context);
-        let mut contract = RepositoryPermission::default();
+        let mut contract = RepositoryPermissionV2::new();
         let mut path = "lalala";
-        contract.set_permission(
-            path.to_string(),
-            "peter".to_string(),
-            PERMISSION_OWNER
-        );
+        contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let mut invitationid = contract.invite(path.to_string(), PERMISSION_READER);
-        
-        contract.redeem_invitation(
-                invitationid,
-                INVITATION_SIGNATURE.to_string()
-            );
-        assert_eq!(PERMISSION_READER, contract.get_permission("peter".to_string(),path.to_string()));
-        
-        path = "abc";
-        contract.set_permission(
-            path.to_string(),
-            "peter".to_string(),
-            PERMISSION_OWNER
+
+        contract.redeem_invitation(invitationid, INVITATION_SIGNATURE.to_string());
+        assert_eq!(
+            PERMISSION_READER,
+            contract.get_permission("peter".to_string(), path.to_string())
         );
+
+        path = "abc";
+        contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         invitationid = contract.invite(path.to_string(), PERMISSION_READER);
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            contract.redeem_invitation(
-                invitationid,
-                INVITATION_SIGNATURE.to_string()
-            );
+            contract.redeem_invitation(invitationid, INVITATION_SIGNATURE.to_string());
         }));
         assert!(result.is_err());
-        
+
         contract.redeem_invitation(
             invitationid,
             "903zZRlh45/KFMoFbpljVffajuNPeEB7J0PLJ7XylcvxdAJ+imQn0vGv9Tp4H/moqr5xJk+jItCv4JAIc/vQBA==".to_string()
         );
 
-        assert_eq!(PERMISSION_READER, contract.get_permission("peter".to_string(),path.to_string()));
+        assert_eq!(
+            PERMISSION_READER,
+            contract.get_permission("peter".to_string(), path.to_string())
+        );
     }
 }
