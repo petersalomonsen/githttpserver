@@ -1,6 +1,6 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use ed25519_dalek::ed25519::signature::Signature as DalekSig;
 use ed25519_dalek::PublicKey as DalekPK;
+use ed25519_dalek::Signature as DalekSig;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::PublicKey;
@@ -51,7 +51,7 @@ impl RepositoryPermissionV2 {
     #[init]
     pub fn new() -> Self {
         let contract = Self {
-            permission: LookupMap::new(REPOSITORY_PERMISSION_KEY.to_vec())
+            permission: LookupMap::new(REPOSITORY_PERMISSION_KEY.to_vec()),
         };
         contract
     }
@@ -70,7 +70,8 @@ impl RepositoryPermissionV2 {
         );
 
         let caller_account_id = env::signer_account_id();
-        let current_permission = self.get_permission(caller_account_id, path.to_string());
+        let current_permission =
+            self.get_permission(caller_account_id.to_string(), path.to_string());
         if current_permission & (PERMISSION_OWNER) > 0 {
             let mut path_users = self.permission.get(&path.to_string()).unwrap().clone();
             path_users.insert(account_id, permission);
@@ -138,7 +139,8 @@ impl RepositoryPermissionV2 {
         };
 
         let caller_account_id = env::signer_account_id();
-        if self.get_permission(caller_account_id, path.to_string()) == PERMISSION_OWNER {
+        if self.get_permission(caller_account_id.to_string(), path.to_string()) == PERMISSION_OWNER
+        {
             invitations.invitations.insert(
                 invitationid,
                 Invitation {
@@ -162,7 +164,7 @@ impl RepositoryPermissionV2 {
         let mut invitations = self.load_invitations();
         let invitation = invitations.invitations.get(&invitationid).unwrap();
 
-        let pk = DalekPK::from_bytes(&invitation.signingkey[1..].to_vec()).unwrap();
+        let pk = DalekPK::from_bytes(&invitation.signingkey.as_bytes()[1..].to_vec()).unwrap();
         let sig = DalekSig::from_bytes(base64::decode(&signature).unwrap().as_slice()).unwrap();
 
         let signedmessage = format!("invitation{}", invitationid);
@@ -172,7 +174,7 @@ impl RepositoryPermissionV2 {
         }
 
         let mut path_users = self.permission.get(&invitation.path).unwrap().clone();
-        path_users.insert(caller_account_id, invitation.permission);
+        path_users.insert(caller_account_id.to_string(), invitation.permission);
         self.permission
             .insert(&invitation.path.to_string(), &path_users);
 
@@ -192,9 +194,10 @@ impl RepositoryPermissionV2 {
 // use the attribute below for unit tests
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use super::*;
-    use near_sdk::MockedBlockchain;
-    use near_sdk::{testing_env, VMContext};
+    use near_sdk::{test_utils::VMContextBuilder, testing_env, VMContext};
 
     const REQUIRED_ATTACHED_DEPOSIT: u128 = 100000000000000000000000;
     const INVITATION_SIGNATURE: &str =
@@ -208,27 +211,17 @@ mod tests {
         is_view: bool,
         attached_deposit: u128,
     ) -> VMContext {
-        VMContext {
-            epoch_height: 0,
-            current_account_id: "alice_near".to_string(),
-            signer_account_id: signer_account_id.to_string(),
-            signer_account_pk: vec![
+        VMContextBuilder::new()
+            .signer_account_id(signer_account_id.parse().unwrap())
+            .current_account_id("alice_near".parse().unwrap())
+            .predecessor_account_id("jane_near".parse().unwrap())
+            .attached_deposit(attached_deposit)
+            .signer_account_pk(vec![
                 00, 66, 211, 21, 84, 20, 241, 129, 29, 118, 83, 184, 41, 215, 240, 117, 106, 56,
                 29, 69, 103, 43, 191, 167, 199, 102, 3, 16, 194, 250, 138, 198, 78,
-            ],
-            predecessor_account_id: "jane_near".to_string(),
-            input,
-            block_index: 0,
-            block_timestamp: 0,
-            account_balance: 0,
-            account_locked_balance: 0,
-            storage_usage: 0,
-            attached_deposit: attached_deposit,
-            prepaid_gas: 10u64.pow(18),
-            random_seed: vec![0, 1, 2],
-            is_view,
-            output_data_receivers: vec![],
-        }
+            ].try_into().unwrap())
+            .is_view(is_view)
+            .build()
     }
 
     #[test]
