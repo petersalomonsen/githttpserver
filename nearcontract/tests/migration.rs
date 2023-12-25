@@ -7,6 +7,9 @@ use {crate::test_env::*, serde_json::json};
 #[tokio::test]
 async fn test_migration() -> anyhow::Result<()> {
     let contract = init_contracts().await?;
+    let initialize_result = contract.call("init").transact().await?;
+    assert!(initialize_result.is_success());
+
     let set_permission_result = contract
         .call("set_permission")
         .args_json(json!({
@@ -35,9 +38,6 @@ async fn test_migration() -> anyhow::Result<()> {
 
     let contract_deploy_result = contract.as_account().deploy(wasm.as_slice()).await?;
     assert!(contract_deploy_result.is_success());
-
-    let initialize_result = contract.call("init").transact().await?;
-    assert!(initialize_result.is_success());
 
     let get_permission_after_upgrade_result: serde_json::Value = contract
         .call("get_permission")
