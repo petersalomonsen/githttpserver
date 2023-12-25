@@ -36,7 +36,7 @@ async fn test_deploy_contract_self_upgrade() -> anyhow::Result<()> {
     let contract_deploy_result = contract.as_account().deploy(wasm.as_slice()).await?;
     assert!(contract_deploy_result.is_success());
 
-    let initialize_result = contract.call("new").transact().await?;
+    let initialize_result = contract.call("init").transact().await?;
     assert!(initialize_result.is_success());
 
     let get_permission_after_upgrade_result: serde_json::Value = contract
@@ -50,5 +50,20 @@ async fn test_deploy_contract_self_upgrade() -> anyhow::Result<()> {
         .json()?;
 
     assert_eq!(1, get_permission_after_upgrade_result);
+
+    let second_initialize_result = contract.call("init").transact().await?;
+    assert!(second_initialize_result.is_failure());
+
+    let get_permission_after_second_upgrade_result: serde_json::Value = contract
+        .call("get_permission")
+        .args_json(json!({
+            "path": "test",
+            "account_id": "peter"
+        }))
+        .view()
+        .await?
+        .json()?;
+
+    assert_eq!(1, get_permission_after_second_upgrade_result);
     Ok(())
 }

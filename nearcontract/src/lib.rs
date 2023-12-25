@@ -4,7 +4,7 @@ use ed25519_dalek::Signature as DalekSig;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::PublicKey;
-use near_sdk::{base64, env, near_bindgen,PanicOnDefault};
+use near_sdk::{base64, env, near_bindgen, PanicOnDefault};
 use std::collections::HashMap;
 
 pub type Permission = u32;
@@ -38,7 +38,7 @@ pub struct RepositoryPermission {
 }
 
 #[near_bindgen]
-#[derive(PanicOnDefault,BorshDeserialize, BorshSerialize)]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
 pub struct Contract {
     permission: LookupMap<String, HashMap<String, Permission>>,
 }
@@ -46,14 +46,18 @@ pub struct Contract {
 #[near_bindgen]
 impl Contract {
     #[init(ignore_state)]
-    pub fn new() -> Self {
-        let old_state: RepositoryPermission = env::state_read().expect("failed");
-
+    pub fn init() -> Self {
         let mut contract = Self {
             permission: LookupMap::new(REPOSITORY_PERMISSION_KEY.to_vec()),
         };
-        for (key, value) in old_state.permission {
-            contract.permission.insert(&key, &value);
+
+        let old_state = env::state_read();
+        if old_state.is_some() {
+            let old_state_value: RepositoryPermission =
+                old_state.unwrap_or_else(|| panic!("nothing to migrate"));
+            for (key, value) in old_state_value.permission {
+                contract.permission.insert(&key, &value);
+            }
         }
         contract
     }
@@ -218,10 +222,14 @@ mod tests {
             .current_account_id("alice_near".parse().unwrap())
             .predecessor_account_id("jane_near".parse().unwrap())
             .attached_deposit(attached_deposit)
-            .signer_account_pk(vec![
-                00, 66, 211, 21, 84, 20, 241, 129, 29, 118, 83, 184, 41, 215, 240, 117, 106, 56,
-                29, 69, 103, 43, 191, 167, 199, 102, 3, 16, 194, 250, 138, 198, 78,
-            ].try_into().unwrap())
+            .signer_account_pk(
+                vec![
+                    00, 66, 211, 21, 84, 20, 241, 129, 29, 118, 83, 184, 41, 215, 240, 117, 106,
+                    56, 29, 69, 103, 43, 191, 167, 199, 102, 3, 16, 194, 250, 138, 198, 78,
+                ]
+                .try_into()
+                .unwrap(),
+            )
             .is_view(is_view)
             .build()
     }
@@ -235,7 +243,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("peter".to_string(), "testrepo".to_string())
@@ -263,7 +271,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("johan".to_string(), "testrepo".to_string())
@@ -311,7 +319,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract: Contract = Contract::new();
+        let mut contract: Contract = Contract::init();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("johan".to_string(), "testrepo".to_string())
@@ -352,7 +360,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("peter".to_string(), "testrepo".to_string())
@@ -397,7 +405,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         assert_eq!(
             PERMISSION_FREE,
             contract.get_permission("peter".to_string(), "testrepo".to_string())
@@ -450,7 +458,7 @@ mod tests {
     fn require_attached_deposits() {
         let context = get_context("peter".to_string(), vec![], false, 2);
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             return contract.set_permission(
@@ -470,7 +478,7 @@ mod tests {
             false,
             REQUIRED_ATTACHED_DEPOSIT
         ));
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         let path = "lalala";
         contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let invitationid = contract.invite(path.to_string(), PERMISSION_READER);
@@ -490,7 +498,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         let path = "lalala";
         contract.set_permission(
             path.to_string(),
@@ -513,7 +521,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         let path = "lalala";
         contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let invitationid = contract.invite(path.to_string(), PERMISSION_READER);
@@ -536,7 +544,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         let path = "lalala";
         contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let invitationid = contract.invite(path.to_string(), PERMISSION_READER);
@@ -561,7 +569,7 @@ mod tests {
             REQUIRED_ATTACHED_DEPOSIT,
         );
         testing_env!(context);
-        let mut contract = Contract::new();
+        let mut contract = Contract::init();
         let mut path = "lalala";
         contract.set_permission(path.to_string(), "peter".to_string(), PERMISSION_OWNER);
         let mut invitationid = contract.invite(path.to_string(), PERMISSION_READER);
