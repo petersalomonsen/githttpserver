@@ -14,7 +14,7 @@ function createRepository() {
     Near.call("wasmgit.near", "set_permission", {
         path: repositoryName,
         account_id: accountId,
-        permission: permission
+        permission: parseInt(''+permission)
     },
         undefined
         , "100000000000000000000000"
