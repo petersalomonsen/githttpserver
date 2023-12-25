@@ -5,7 +5,7 @@ mod test_env;
 use {crate::test_env::*, serde_json::json};
 
 #[tokio::test]
-async fn test_deploy_contract_self_upgrade() -> anyhow::Result<()> {
+async fn test_migration() -> anyhow::Result<()> {
     let contract = init_contracts().await?;
     let set_permission_result = contract
         .call("set_permission")
