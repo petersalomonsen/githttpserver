@@ -80,17 +80,23 @@ export async function checkPermission(repository, token) {
     }
 
     const account = await near.account(msgobj.accountId);
-    const accesskeys = await account.getAccessKeys();
+    let pubkey;
+    if (msgobj.accountId.length == 64) {
+        pubkey = new Uint8Array(32);
+        for (let i = 0; i < pubkey.length; i++) {
+            pubkey[i] = parseInt(msgobj.accountId.substr(i * 2, 2), 16);
+        }
+    } else {
+        const accesskeys = await account.getAccessKeys();
+        const publicKeys = accesskeys.map(key =>
+            nearApi.utils.PublicKey.fromString(key.public_key)
+        );
 
-    const publicKeys = accesskeys.map(key =>
-        nearApi.utils.PublicKey.fromString(key.public_key)
-    );
-
-    const pubkey = publicKeys.find(pk =>
-        nacl.sign.detached.verify(new Uint8Array(sha256.array(msgbytes)),
-            new Uint8Array(signature), new Uint8Array(pk.data))
-    );
-
+        pubkey = publicKeys.find(pk =>
+            nacl.sign.detached.verify(new Uint8Array(sha256.array(msgbytes)),
+                new Uint8Array(signature), new Uint8Array(pk.data))
+        );
+    }
     if (pubkey) {
         const contract = new nearApi.Contract(account,
             nearconfig.contractName,
