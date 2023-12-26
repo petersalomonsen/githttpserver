@@ -1,7 +1,7 @@
 describe('libgit2 webworker', function () {
     this.timeout(10000);
     it('should receive confirmation that access token was configured in webworker', async () => {
-        const worker = new Worker('libgit2_webworker.js');
+        const worker = new Worker(new URL('libgit2_webworker.js', import.meta.url));
         const replyPromise = new Promise(resolve =>
             worker.onmessage = (msg) => resolve(msg)
         );
