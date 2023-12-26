@@ -45,4 +45,5 @@ jobs:
       - name: Rust smart contract for access control
         run: |
           cd nearcontract
+          rustup target add wasm32-unknown-unknown
           cargo test --package rust-simple-access-control -- --nocapture
