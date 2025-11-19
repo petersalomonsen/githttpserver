@@ -32,6 +32,16 @@ export function use_testnet(contractName) {
     };
 }
 
+export function use_sandbox(contractName, nodeUrl, keyStore) {
+    nearconfig = {
+        nodeUrl: nodeUrl,
+        contractName: contractName,
+        deps: {
+            keyStore: keyStore
+        }
+    };
+}
+
 export async function checkPermission(repository, token) {
     const permissionCacheKey = `${token}_${repository}`;
     const cachedPermission = permissionCache[permissionCacheKey];
