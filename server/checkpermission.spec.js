@@ -197,7 +197,6 @@ describe('checkpermission', function () {
     before(async () => {
         // Start sandbox
         sandbox = await Sandbox.start({
-            version: '2.8.0',
             timeout: 60000,
             config: {
                 additionalGenesis: {
