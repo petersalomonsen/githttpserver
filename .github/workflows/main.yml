@@ -22,7 +22,7 @@ jobs:
       - name: NodeJS
         run: |
           rustup target add wasm32-unknown-unknown
-          (cd nearcontract && ./buildanddeploy.sh)
+          (cd nearcontract && ./build.sh)
           npm install
           npm test
   chromeheadless:
