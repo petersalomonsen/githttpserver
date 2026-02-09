@@ -5,7 +5,7 @@
     },
     "scripts": {
         "start": "node server/githttpserver.js",
-        "test": "mocha server/**/*.spec.js",
+        "test": "DIR_TO_DOWNLOAD_BINARY=/tmp/near-sandbox mocha server/**/*.spec.js",
         "test-browser": "karma start --single-run --browsers ChromeHeadless_NoUserGestureRequired karma.conf.cjs",
         "test-browser-watch": "karma start --browsers Chrome_NoUserGestureRequired karma.conf.cjs"
     },
@@ -14,6 +14,7 @@
         "cgi": "^0.3.1",
         "js-sha256": "^0.9.0",
         "near-api-js": "^0.45.1",
+        "near-sandbox": "^0.2.1",
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
@@ -23,7 +24,6 @@
         "karma-chai": "^0.1.0",
         "karma-chrome-launcher": "^3.1.1",
         "karma-mocha": "^2.0.1",
-        "mocha": "^9.2.2",
-        "near-sandbox": "^0.2.0"
+        "mocha": "^9.2.2"
     }
 }

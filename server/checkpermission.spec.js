@@ -58,7 +58,7 @@ async function createAccount(accountId, initialBalance = '1000000000000000000000
         utils.serialize.base_decode(blockHash)
     );
 
-    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const serializedTx = utils.serialize.serialize(transactions.SCHEMA, tx);
     const txHash = crypto.createHash('sha256').update(serializedTx).digest();
     const signature = rootKeyPair.sign(txHash);
 
@@ -103,7 +103,7 @@ async function deployContract(accountId, wasmCode) {
         utils.serialize.base_decode(blockHash)
     );
 
-    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const serializedTx = utils.serialize.serialize(transactions.SCHEMA, tx);
     const txHash = crypto.createHash('sha256').update(serializedTx).digest();
     const signature = keyPair.sign(txHash);
 
@@ -161,7 +161,7 @@ async function functionCall(
         utils.serialize.base_decode(blockHash)
     );
 
-    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const serializedTx = utils.serialize.serialize(transactions.SCHEMA, tx);
     const txHash = crypto.createHash('sha256').update(serializedTx).digest();
     const signature = keyPair.sign(txHash);
 
