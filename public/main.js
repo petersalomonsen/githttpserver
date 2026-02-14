@@ -247,7 +247,7 @@ const nearconfig_testnet = {
 };
 const nearconfig = {
     nodeUrl: 'https://rpc.mainnet.near.org',
-    walletUrl: 'https://wallet.near.org',
+    walletUrl: 'https://app.mynearwallet.com',
     helperUrl: 'https://helper.mainnet.near.org',
     contractName: 'wasmgit.near',
     deps: {

@@ -24,7 +24,7 @@ testnet:
 `near view acl.testnet get_permission '{"account_id": "myaccountid.testnet", "path": "myrepositorypath"}'`
 
 mainnet:
-`near view wasmgit.near get_permission --networkId mainnet --walletUrl https://wallet.near.org --nodeUrl https://rpc.mainnet.near.org '{"account_id": "psalomo.near", "path": "psalomo202101"}'`
+`near view wasmgit.near get_permission --networkId mainnet --walletUrl https://app.mynearwallet.com --nodeUrl https://rpc.mainnet.near.org '{"account_id": "psalomo.near", "path": "psalomo202101"}'`
 
 # Building
 
@@ -42,4 +42,4 @@ deploy:
 
 deploy to mainnet:
 
-`near deploy --wasmFile target/wasm32-unknown-unknown/release/rust_simple_access_control.wasm --accountId wasmgit.near --networkId mainnet --walletUrl https://wallet.near.org --nodeUrl https://rpc.mainnet.near.org`
+`near deploy --wasmFile target/wasm32-unknown-unknown/release/rust_simple_access_control.wasm --accountId wasmgit.near --networkId mainnet --walletUrl https://app.mynearwallet.com --nodeUrl https://rpc.mainnet.near.org`
