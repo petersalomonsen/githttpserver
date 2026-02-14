@@ -34,7 +34,8 @@ async fn test_migration() -> anyhow::Result<()> {
 
     assert_eq!(1, get_permission_result);
 
-    let wasm = near_workspaces::compile_project("./").await?;
+    let wasm = std::fs::read("./out/main.wasm")
+        .expect("Contract WASM not found. Run ./build.sh first.");
 
     let contract_deploy_result = contract.as_account().deploy(wasm.as_slice()).await?;
     assert!(contract_deploy_result.is_success());

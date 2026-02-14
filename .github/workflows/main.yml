@@ -22,6 +22,7 @@ jobs:
       - name: NodeJS
         run: |
           rustup target add wasm32-unknown-unknown
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/latest/download/cargo-near-installer.sh | sh
           (cd nearcontract && ./build.sh)
           npm install
           npm test
@@ -43,4 +44,6 @@ jobs:
         run: |
           cd nearcontract
           rustup target add wasm32-unknown-unknown
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/latest/download/cargo-near-installer.sh | sh
+          ./build.sh
           cargo test --package rust-simple-access-control -- --nocapture

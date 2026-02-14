@@ -2,7 +2,9 @@
   "image": "mcr.microsoft.com/devcontainers/universal",
   "features": {
     "ghcr.io/devcontainers/features/rust:1": {},
-    "ghcr.io/devcontainers/features/node:1": {}
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/near/near-devcontainers/features/cargo-near:latest": {},
+    "ghcr.io/near/near-devcontainers/features/near-cli:latest": {}
   },
   "customizations": {
     "vscode": {
