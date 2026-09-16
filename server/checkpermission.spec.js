@@ -327,10 +327,36 @@ describe('checkpermission', function () {
         const privateKey = new Uint8Array([254, 114, 130, 212,  33,  69, 193,  93,  12,  15, 108,  76,  19, 198, 118, 148, 193,  62,  78,   4,   9, 157, 188, 191, 132, 137, 188,  31,  54, 103, 246, 191,  62,  57,  59, 247,  76, 246,  60, 248, 227, 133,  30, 160, 254, 106, 146, 229, 101, 149, 245,   6, 148, 125, 124, 102,  49,  14, 108, 234, 201, 122,  62, 159]);
 
         const tokenMessage = btoa(JSON.stringify({ accountId: implicitAccountId, iat: new Date().getTime() }));
-        const signature = nacl.sign.detached(new TextEncoder().encode(tokenMessage), privateKey);
+        // The NEAR signer signs the sha256 hash of the message, same as for named accounts
+        const messageHash = new Uint8Array(sha256.array(Buffer.from(tokenMessage)));
+        const signature = nacl.sign.detached(messageHash, privateKey);
         const accessToken = tokenMessage + '.' + btoa(String.fromCharCode(...signature));
 
         const result = await checkPermission(reponame, accessToken);
         assert.equal(result.permission, PERMISSION_CONTRIBUTOR);
+    });
+
+    it('should reject a forged signature for an implicit account', async () => {
+        const implicitAccountId = '3e393bf74cf63cf8e3851ea0fe6a92e56595f506947d7c66310e6ceac97a3e9f';
+
+        const tokenMessage = btoa(JSON.stringify({ accountId: implicitAccountId, iat: new Date().getTime() }));
+        const forgedSignature = new Uint8Array(64).fill(0x42);
+        const accessToken = tokenMessage + '.' + btoa(String.fromCharCode(...forgedSignature));
+
+        const result = await checkPermission(reponame, accessToken);
+        assert.equal(result.permission, 0);
+    });
+
+    it('should reject a signature from a different key for an implicit account', async () => {
+        const implicitAccountId = '3e393bf74cf63cf8e3851ea0fe6a92e56595f506947d7c66310e6ceac97a3e9f';
+        const attackerKeyPair = nacl.sign.keyPair();
+
+        const tokenMessage = btoa(JSON.stringify({ accountId: implicitAccountId, iat: new Date().getTime() }));
+        const messageHash = new Uint8Array(sha256.array(Buffer.from(tokenMessage)));
+        const signature = nacl.sign.detached(messageHash, attackerKeyPair.secretKey);
+        const accessToken = tokenMessage + '.' + btoa(String.fromCharCode(...signature));
+
+        const result = await checkPermission(reponame, accessToken);
+        assert.equal(result.permission, 0);
     });
 });
