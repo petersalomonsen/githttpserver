@@ -92,10 +92,13 @@ export async function checkPermission(repository, token) {
     const account = await near.account(msgobj.accountId);
     let pubkey;
     if (msgobj.accountId.length == 64) {
-        pubkey = new Uint8Array(32);
-        for (let i = 0; i < pubkey.length; i++) {
-            pubkey[i] = parseInt(msgobj.accountId.substr(i * 2, 2), 16);
+        // Implicit account: the account id is the hex encoded ed25519 public key
+        const implicitKey = new Uint8Array(32);
+        for (let i = 0; i < implicitKey.length; i++) {
+            implicitKey[i] = parseInt(msgobj.accountId.substr(i * 2, 2), 16);
         }
+        pubkey = nacl.sign.detached.verify(new Uint8Array(sha256.array(msgbytes)),
+            new Uint8Array(signature), implicitKey) ? implicitKey : undefined;
     } else {
         const accesskeys = await account.getAccessKeys();
         const publicKeys = accesskeys.map(key =>
