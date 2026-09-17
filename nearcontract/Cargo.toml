@@ -8,17 +8,14 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-byteorder= "1.4.2"
-near-sdk = { version = "5.6.0", features = ["legacy"] }
-ed25519-dalek = "1.0.1"
+near-sdk = { version = "5.29.0", default-features = false, features = ["legacy"] }
 borsh = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
-near-sdk = { version = "5.6.0", features = ["legacy", "unit-testing"] }
-near-workspaces = "0.22.1"
+near-sdk = { version = "5.29.0", default-features = false, features = ["legacy", "unit-testing"] }
+near-workspaces = "0.23.0"
 tokio = { version = "1.10.0", features = ["full"] }
 anyhow = "1.0"
-near-units = "0.2.0"
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 
 [profile.release]
