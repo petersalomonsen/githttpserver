@@ -194,8 +194,9 @@ async function functionCall(
 describe('checkpermission', function () {
     this.timeout(60000);
 
-    before(async () => {
-        // Start sandbox
+    before(async function () {
+        // Starting the sandbox may include downloading the binary, allow extra time
+        this.timeout(180000);
         sandbox = await Sandbox.start({
             timeout: 60000,
             config: {
