@@ -20,7 +20,7 @@ module.exports = function(config) {
       ],
   
       proxies: {
-        '/libgit2_webworker.js': '/base/public/libgit2_webworker.js',        
+        '/gitworker.js': '/base/public/gitworker.js',
       },
   
       // preprocess matching files before serving them to the browser
