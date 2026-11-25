@@ -24,6 +24,14 @@ function createCGI(accountId) {
 };
 
 const publicdir = `${process.cwd()}/public`;
+const contentTypes = {
+    'html': 'text/html; charset=utf-8',
+    'js': 'application/javascript',
+    'css': 'text/css',
+    'json': 'application/json',
+    'svg': 'image/svg+xml',
+    'wasm': 'application/wasm'
+};
 
 createServer(async (request, response) => {
     let path = request.url.substring(1).split(/\?/)[0];
@@ -87,10 +95,9 @@ createServer(async (request, response) => {
             response.end("invalid token");
         }
     } else if (await new Promise(resolve => exists(`${publicdir}/${path}`, res => resolve(res)))) {
-        if (path.indexOf('.js') === path.length - 3) {
-            response.setHeader('Content-Type', 'application/javascript');
-        } else if (path.indexOf('.wasm') === path.length - 5) {
-            response.setHeader('Content-Type', 'application/wasm');
+        const contentType = contentTypes[path.substring(path.lastIndexOf('.') + 1)];
+        if (contentType) {
+            response.setHeader('Content-Type', contentType);
         }
         response.end(await new Promise(resolve => readFile(`${publicdir}/${path}`, (err, data) => resolve(data))));
     } else {

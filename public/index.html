@@ -1,287 +1,84 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <style>
-        * {
-            font-family: monospace;
-            font-size: 16px;
-        }
-
-        h1 {
-            font-size: 30px;
-        }
-
-        button {
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        #contentarea {
-            max-width: 1024px;
-            padding-left: 20px;
-            grid-area: main;
-            overflow-y: auto;
-        }
-
-        .maingrid {
-            display: inline-grid;
-            grid-template-areas:
-                'header header'
-                'menu main'
-                'menu footer';
-            grid-template-columns: minmax(auto, 200px) auto;
-            grid-template-rows: 50px auto 100px;
-            transition: all 0.2s;
-            margin: 0px;
-            color: #020;
-            background-color: #ddd;
-            overflow: hidden;
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
-
-        #header {
-            grid-area: header;
-            background-color: #333;
-            display: flex;
-        }
-
-        #console {
-            grid-area: footer;
-            display: inline-grid;
-            grid-template-columns: auto 10px;
-            padding: 3px;
-            padding-left: 20px;
-            padding-right: 20px;
-            max-width: 1024px;
-            background-color: rgba(0, 0, 0, 0.9);
-            color: green;
-        }
-
-        #consolecontent {
-            height: 100%;
-            overflow: auto;
-        }
-
-        #sidemenu {
-            background-color: #333;
-            color: #0f0;
-            grid-area: menu;
-            z-index: 1000;
-            transition: all 0.2s;
-        }
-
-        #sidemenu li {
-            cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        #sidemenu li {
-            list-style-type: none;
-            padding-top: 4px;
-            padding-bottom: 4px;
-
-            padding-left: 10px;
-        }
-
-        #sidemenu li:hover {
-            background-color: #666;
-        }
-
-        #sidemenu ul {
-            padding-left: 0px;
-        }
-
-        @media screen and (max-width: 600px) {
-            body {
-                grid-template-areas:
-                    'header header'
-                    'menu main'
-                    'menu footer';
-                grid-template-columns: auto auto;
-            }
-
-            #contentarea {
-                grid-area: main-start / menu-start / main-end / main-end;
-            }
-
-            #console {
-                grid-area: footer-start / menu-start / footer-end / footer-end;
-            }
-        }
-
-        .menutogglebutton {
-            padding: 7px;
-            display: inline-block;
-            cursor: pointer;
-        }
-
-        .menutogglebuttonbar1,
-        .menutogglebuttonbar2,
-        .menutogglebuttonbar3 {
-            width: 35px;
-            height: 5px;
-            background-color: #fff;
-            margin: 6px 0;
-            transition: 0.4s;
-        }
-
-        .menutogglebuttonchange .menutogglebuttonbar1 {
-            -webkit-transform: rotate(-45deg) translate(-9px, 6px);
-            transform: rotate(-45deg) translate(-9px, 6px);
-        }
-
-        .menutogglebuttonchange .menutogglebuttonbar2 {
-            opacity: 0;
-        }
-
-        .menutogglebuttonchange .menutogglebuttonbar3 {
-            -webkit-transform: rotate(45deg) translate(-8px, -8px);
-            transform: rotate(45deg) translate(-8px, -8px);
-        }
-
-
-        #currentuserspan {
-            color: white;
-        }
-
-        .arrow {
-            border: solid white;
-            border-width: 0 3px 3px 0;
-            display: inline-block;
-            padding: 3px;
-        }
-
-
-        .right {
-            transform: rotate(-45deg);
-            -webkit-transform: rotate(-45deg);
-        }
-
-        .left {
-            transform: rotate(135deg);
-            -webkit-transform: rotate(135deg);
-        }
-
-        .up {
-            transform: rotate(-135deg);
-            -webkit-transform: rotate(-135deg);
-        }
-
-        .down {
-            transform: rotate(45deg);
-            -webkit-transform: rotate(45deg);
-        }
-
-        #consoletoggle {
-            cursor: pointer;
-        }
-    </style>
+    <title>wasm-git</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="maingrid">
-    <div id="header">
-        <div class="menutogglebutton" onclick="toggleMenu(this)">
-            <div class="menutogglebuttonbar1"></div>
-            <div class="menutogglebuttonbar2"></div>
-            <div class="menutogglebuttonbar3"></div>
+<body>
+    <header id="header">
+        <button id="sidebartoggle" class="icon" title="Toggle files" aria-label="Toggle files">☰</button>
+        <span class="brand">wasm-git</span>
+        <form id="repoform" class="repoform">
+            <input id="repourl" type="text" spellcheck="false" aria-label="Repository URL"
+                placeholder="https://example.com/repository">
+            <button id="clonebutton" type="submit">Clone</button>
+        </form>
+        <span class="spacer"></span>
+        <button id="accountbutton">Sign in</button>
+    </header>
+
+    <aside id="sidebar">
+        <div class="toolbar">
+            <button id="pullbutton" title="Fetch and merge from the server">Pull</button>
+            <button id="commitbutton" title="Commit all changes">Commit</button>
+            <button id="pushbutton" title="Pull, then push commits to the server">Push</button>
+            <button id="repomenubutton" class="icon" title="More" aria-label="More">⋯</button>
         </div>
-        <span style="flex-grow: 1"></span>
-        <button id="loginbutton" onclick="login()" style="font-weight: bold; font-size: 16px">Login</button>
-        <span id="currentuserspan"></span>
-    </div>
-    <div id="sidemenu">
-        <ul>
-
-            <li onclick="openEditor()">New file</li>
-            <li onclick="gitcommand('pull')">Pull</li>
-            <li onclick="gitcommand('push')">Push</li>
-            <li onclick="gitcommand('log')">Log</li>
-            <li onclick="gitcommand('status')">Status</li>
-            <li onclick="clearconsole()">Clear output</li>
-            <li onclick="terminalconfig()">Terminal config</li>
-            <li onclick="deletelocal()">Delete local clone</li>
-            <li style="height: 15px;"></li>
-
-            <li onclick="newRepository()">New repository</li>
-            <li onclick="setPermissionForRepo()">Set permissions</li>
-        </ul>
-    </div>
-    <div id="contentarea">
-        <h1>GIT for offline web-app storage</h1>
-        <p>
-            <a target="_blank" href="https://github.com/petersalomonsen/wasm-git">Wasm-git</a>
-            makes it possible to use GIT for offline (in-browser) web-app storage.
-            This site provides a git-server without CORS restrictions that can be used for synchronizing
-            git repositories used in web-apps.
-        </p>
-
-        <p>
-            For more information about this git server, check out the <a target="_blank"
-                href="https://github.com/petersalomonsen/githttpserver">githttpserver</a> project.
-        </p>
-        <div style="display: flex">
-            <input id="gitrepourl" style="background-color: #eee; padding: 5px; flex-grow:1" onchange="synclocal()" />
-            <button onclick="clone()" id="clonebutton">Clone</button>
+        <div class="sidebarheader">
+            <span>Files</span>
+            <span class="spacer"></span>
+            <button id="newfilebutton" class="icon" title="New file" aria-label="New file">+</button>
+            <button id="refreshbutton" class="icon" title="Refresh" aria-label="Refresh">⟳</button>
         </div>
-        <br />
-        <br />
-        <template id="dircontentline">
-            <div style="display: flex;">
-                <a id="filename" style="flex-grow: 1; text-overflow: ellipsis;" href="#"
-                    onclick="event.preventDefault();opendirentry(this.innerHTML)"></a>
-                <button id="editbutton">edit</button>
+        <div id="tree" class="tree" role="tree"></div>
+    </aside>
+
+    <main id="main">
+        <div id="tabs" class="tabs">
+            <div id="tablist" class="tablist"></div>
+            <button id="previewbutton" hidden>Preview</button>
+            <button id="savebutton" disabled title="Save (Ctrl/Cmd+S)">Save</button>
+        </div>
+        <div id="workspace" class="workspace">
+            <div id="welcome" class="welcome">
+                <h1>GIT for offline web-app storage</h1>
+                <p>
+                    <a target="_blank" href="https://github.com/petersalomonsen/wasm-git">wasm-git</a>
+                    makes it possible to use GIT for offline (in-browser) web-app storage.
+                    This site provides a git server without CORS restrictions that can be used for synchronizing
+                    git repositories used in web-apps.
+                </p>
+                <p>
+                    Enter a repository URL above and clone it. Files are kept in your browser, so you can keep
+                    editing offline. <b>Save</b> writes to the local working tree, <b>Commit</b> records all changes,
+                    and <b>Push</b> sends your commits to the server.
+                </p>
+                <p>
+                    For more information about this git server, check out the
+                    <a target="_blank" href="https://github.com/petersalomonsen/githttpserver">githttpserver</a>
+                    project.
+                </p>
             </div>
-        </template>
-        <div id="dircontents">
+            <div id="editorpane" class="editorpane" hidden></div>
+            <iframe id="preview" class="preview" hidden title="Preview"></iframe>
         </div>
+    </main>
 
-        <br />
-        <br />
-
-    </div>
-    <div id="console">
-        <div id="consolecontent">
-
+    <section id="output" class="output collapsed">
+        <div class="outputheader">
+            <button id="outputtoggle" class="link">Output</button>
+            <span id="statusline" class="statusline"></span>
+            <span class="spacer"></span>
+            <button id="outputclear" class="icon" title="Clear output" aria-label="Clear output">⌫</button>
         </div>
-        <div id="consoletoggle" onclick="toggleConsoleHeight()">
-            <i class="arrow up"></i>
-        </div>
-    </div>
-    </div>
-    <template id="editortemplate">
-        <div id="editor" style="display: flex;
-                    flex-direction: column;
-                    position: absolute;
-                    top: 0px;
-                    bottom: 0px;
-                    left: 0px;
-                    right: 0px;
-                    padding: 10px;
-                    background-color: rgba(255,255,255,0.95);
-                    z-index: 10000;">
-            <p>
-                <button id="savebutton">commit</button>
-                <button id="cancelbutton">cancel</button>
+        <div id="outputcontent" class="outputcontent"></div>
+    </section>
 
-                filename: <input type="text" id="filenamefield" title="filename" />
-
-                commit message: <input type="text" id="commitmessagefield" title="commit message" />
-            </p>
-            <textarea style="flex-grow: 1; width: 100%; height: 100%"></textarea>
-        </div>
-    </template>
-    <script src="https://cdn.jsdelivr.net/npm/near-api-js@0.45.1/dist/near-api-js.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bn.js"></script>
     <script src="main.js" type="module"></script>
-    <script src="ui.js"></script>
 </body>
 
 </html>
