@@ -145,6 +145,21 @@ async function pull() {
     return { merged: true, message: stdout.trim() };
 }
 
+/**
+ * `cat-file -p HEAD:<path>`. Emscripten's stdout is line-buffered and never
+ * flushes a last line without a newline, so the tail of a file that does not
+ * end in one would surface in front of the NEXT command's output. `rev-parse
+ * HEAD` right after drains it: its output is that tail, then a 40-hex sha and
+ * a newline.
+ */
+async function readHead(path) {
+    const head = await run(['cat-file', '-p', `HEAD:${path}`]);
+    const flush = await run(['rev-parse', 'HEAD']);
+    if (head.stderr.trim()) return null;
+    const match = /^([\s\S]*)[0-9a-f]{40}\n$/.exec(flush.stdout);
+    return head.stdout + (match ? match[1] : '');
+}
+
 function packedRefExists(ref) {
     const packed = `${repoDir()}/.git/packed-refs`;
     if (!FS.analyzePath(packed).exists) return false;
@@ -241,6 +256,50 @@ const handlers = {
     async status() {
         requireRepo();
         return await status();
+    },
+
+    /**
+     * Search working-tree text files. Returns { matches: [{path, line, text}], truncated }.
+     * `pattern` is a JavaScript regular expression; `path` limits the search to a file or folder.
+     */
+    async grep({ pattern, path = '', ignoreCase = false, maxMatches = 200 }) {
+        requireRepo();
+        const regex = new RegExp(pattern, ignoreCase ? 'i' : '');
+        const prefix = path ? safePath(path.replace(/\/+$/, '')) : '';
+        const matches = [];
+        for (const file of listTree()) {
+            if (file.endsWith('/')) continue;
+            if (prefix && file !== prefix && !file.startsWith(prefix + '/')) continue;
+            const bytes = FS.readFile(`${repoDir()}/${file}`);
+            if (bytes.length > 1024 * 1024 || bytes.subarray(0, 8000).includes(0)) continue;
+            const lines = new TextDecoder().decode(bytes).split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (regex.test(lines[i])) {
+                    matches.push({ path: file, line: i + 1, text: lines[i].substring(0, 300) });
+                    if (matches.length >= maxMatches) return { matches, truncated: true };
+                }
+            }
+        }
+        return { matches, truncated: false };
+    },
+
+    /** A file's committed (HEAD) contents, or null if HEAD does not have it. */
+    async readhead({ path }) {
+        requireRepo();
+        return await readHead(safePath(path));
+    },
+
+    /** Restore a file to its committed version, or remove it if it is not committed. */
+    async discard({ path }) {
+        requireRepo();
+        const rel = safePath(path);
+        const committed = await readHead(rel);
+        if (committed === null) {
+            await handlers.deletepath({ path: rel });
+        } else {
+            await handlers.writefile({ path: rel, contents: committed });
+        }
+        return { restored: committed !== null };
     },
 
     async diff() {

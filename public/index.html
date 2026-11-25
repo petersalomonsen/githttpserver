@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
+<body class="assistant-hidden">
     <header id="header">
         <button id="sidebartoggle" class="icon" title="Toggle files" aria-label="Toggle files">☰</button>
         <span class="brand">wasm-git</span>
@@ -18,6 +18,7 @@
             <button id="clonebutton" type="submit">Clone</button>
         </form>
         <span class="spacer"></span>
+        <button id="assistanttoggle" title="AI assistant (NEAR AI)">Assistant</button>
         <button id="accountbutton">Sign in</button>
     </header>
 
@@ -67,6 +68,28 @@
             <iframe id="preview" class="preview" hidden title="Preview"></iframe>
         </div>
     </main>
+
+    <aside id="assistant" class="assistant" aria-label="AI assistant">
+        <div class="assistantheader">
+            <span>Assistant</span>
+            <select id="assistantmodel" aria-label="Model" title="NEAR AI model"></select>
+            <button id="assistantmenu" class="icon" title="More" aria-label="More">⋯</button>
+            <button id="assistantclose" class="icon" title="Close" aria-label="Close assistant">×</button>
+        </div>
+        <div id="assistantmessages" class="assistantmessages" aria-live="polite"></div>
+        <div class="assistantfooter">
+            <button id="assistantconnect" class="primary" hidden>Connect a NEAR AI account</button>
+            <form id="assistantform" hidden>
+                <textarea id="assistantinput" rows="3"
+                    placeholder="Ask about the code, or ask for a change. Enter sends, Shift+Enter is a new line."></textarea>
+                <div class="assistantactions">
+                    <span class="hint">Edits are saved to the working tree, not committed. Messages and the files
+                        the assistant reads go to NEAR AI.</span>
+                    <button id="assistantsend" type="submit" class="primary">Send</button>
+                </div>
+            </form>
+        </div>
+    </aside>
 
     <section id="output" class="output collapsed">
         <div class="outputheader">

@@ -1,6 +1,8 @@
 import { Editor, extensionOf } from './editor.js';
 import { dialog, prompt, confirm, alert, h } from './dialog.js';
 import * as near from './near.js';
+import { fileDiff, renderDiff } from './diff.js';
+import { initAssistant } from './assistant.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -252,6 +254,7 @@ function renderTree() {
                     }
                 },
                 deletable: status !== 'D',
+                changed: !!status,
             }));
         }
     };
@@ -261,7 +264,13 @@ function renderTree() {
     }
 }
 
-function treeRow({ path, depth, twisty, name, badge, cls, onclick, deletable = true }) {
+function treeRow({ path, depth, twisty, name, badge, cls, onclick, deletable = true, changed = false }) {
+    const action = (label, title, fn) => h('button', {
+        class: 'icon action',
+        title: `${title} ${path}`,
+        'aria-label': `${title} ${path}`,
+        onclick: (e) => { e.stopPropagation(); quiet(fn(path)); },
+    }, label);
     const row = h('div', {
         class: `row ${cls} ${state.selected === path ? 'selected' : ''}`,
         role: 'treeitem',
@@ -271,13 +280,10 @@ function treeRow({ path, depth, twisty, name, badge, cls, onclick, deletable = t
     },
         h('span', { class: 'twisty' }, twisty),
         h('span', { class: 'name' }, name),
-        h('span', { class: 'badge' }, badge),
-        deletable ? h('button', {
-            class: 'icon delete',
-            title: `Delete ${path}`,
-            'aria-label': `Delete ${path}`,
-            onclick: (e) => { e.stopPropagation(); quiet(deletePath(path)); },
-        }, '×') : null);
+        changed ? action('±', 'Show diff of', showDiff) : null,
+        changed ? action('↺', 'Discard changes to', discardChanges) : null,
+        deletable ? action('×', 'Delete', deletePath) : null,
+        h('span', { class: 'badge' }, badge));
     return row;
 }
 
@@ -316,6 +322,27 @@ async function deletePath(path) {
         if (tab.path === path || (isDir && tab.path.startsWith(path))) closeTab(tab.path, true);
     }
     await refreshTree();
+}
+
+async function showDiff(path) {
+    const patch = await busy(`diff ${path}`, () => fileDiff(git, path));
+    await alert(`Changes to ${path}`, patch ? renderDiff(patch) : h('p', {}, 'No changes against the last commit.'));
+}
+
+async function discardChanges(path) {
+    const ok = await confirm(`Discard changes to ${path}?`,
+        'The file goes back to its last committed version (a new file is deleted). This cannot be undone.',
+        'Discard');
+    if (!ok) return;
+    const { restored } = await busy(`discard ${path}`, () => git('discard', { path }));
+    if (!restored) closeTab(path, true);
+    await refreshTree();
+    const tab = state.tabs.find(t => t.path === path);
+    if (tab) {
+        tab.dirty = false;
+        tab.saved = null; // force the reload below to replace the editor contents
+    }
+    await reloadOpenFiles();
 }
 
 // ---- tabs and editor -------------------------------------------------------
@@ -745,6 +772,21 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('beforeunload', (e) => {
     if (state.tabs.some(t => t.dirty)) e.preventDefault();
+});
+
+initAssistant({
+    git,
+    log,
+    popupMenu,
+    refreshTree,
+    reloadOpenFiles,
+    openFile,
+    showDiff,
+    closeTab: (path) => closeTab(path, true),
+    isCloned: () => state.cloned,
+    repoName,
+    openTabs: () => state.tabs.map(t => ({ path: t.path, dirty: t.dirty })),
+    activeFile: () => ({ path: state.active, selection: state.active ? editor.selection : null }),
 });
 
 renderAccount();

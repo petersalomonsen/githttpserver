@@ -116,4 +116,16 @@ export class Editor {
     get text() {
         return this.view.state.doc.toString();
     }
+
+    /** The selected text in the current file, with its line range, or null. */
+    get selection() {
+        const { state } = this.view;
+        const range = state.selection.main;
+        if (range.empty) return null;
+        return {
+            text: state.sliceDoc(range.from, range.to),
+            fromLine: state.doc.lineAt(range.from).number,
+            toLine: state.doc.lineAt(range.to).number,
+        };
+    }
 }

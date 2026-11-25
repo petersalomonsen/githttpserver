@@ -27,10 +27,10 @@ body {
 body {
     display: grid;
     grid-template-areas:
-        'header header'
-        'sidebar main'
-        'output output';
-    grid-template-columns: 260px minmax(0, 1fr);
+        'header header header'
+        'sidebar main assistant'
+        'output output output';
+    grid-template-columns: 260px minmax(0, 1fr) 380px;
     grid-template-rows: 44px minmax(0, 1fr) auto;
     background: var(--bg);
     color: var(--text);
@@ -38,7 +38,19 @@ body {
 }
 
 body.sidebar-hidden {
-    grid-template-columns: 0 minmax(0, 1fr);
+    grid-template-columns: 0 minmax(0, 1fr) 380px;
+}
+
+body.assistant-hidden {
+    grid-template-columns: 260px minmax(0, 1fr) 0;
+}
+
+body.sidebar-hidden.assistant-hidden {
+    grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+
+body:not(.assistant-hidden) #assistanttoggle {
+    border-color: var(--accent);
 }
 
 a {
@@ -224,14 +236,14 @@ select:focus {
     text-align: center;
 }
 
-.tree .delete {
-    visibility: hidden;
+.tree .action {
+    display: none;
     padding: 0 4px;
     color: var(--muted);
 }
 
-.tree .row:hover .delete {
-    visibility: visible;
+.tree .row:hover .action {
+    display: inline-block;
 }
 
 .status-M .name,
@@ -535,9 +547,189 @@ dialog.dialog .buttons {
     margin: 4px 0;
 }
 
+/* assistant */
+
+.assistant {
+    grid-area: assistant;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+}
+
+.assistant-hidden .assistant {
+    display: none;
+}
+
+.assistantheader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 6px 6px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.assistantheader select {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    padding: 2px 4px;
+}
+
+.assistantmessages {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.msg {
+    overflow-wrap: anywhere;
+}
+
+.msg.user {
+    align-self: flex-end;
+    max-width: 90%;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #37414d;
+    white-space: pre-wrap;
+}
+
+.msg.assistant {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+}
+
+.msg.assistant p {
+    margin: 0.4em 0;
+}
+
+.msg.assistant pre {
+    overflow: auto;
+    padding: 8px;
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.msg.assistant code {
+    font-family: var(--font);
+    font-size: 13px;
+}
+
+.msg.tool,
+.msg.thinking {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.msg.thinking {
+    animation: pulse 1s infinite alternate;
+}
+
+.msg.tool.error,
+.msg.error {
+    color: var(--deleted);
+}
+
+.msg.change {
+    font-size: 12px;
+}
+
+.msg.change .add,
+.diff .add {
+    color: var(--added);
+}
+
+.msg.change .del,
+.diff .del {
+    color: var(--deleted);
+}
+
+.diff .hunk {
+    color: #79b8ff;
+}
+
+.diff .meta {
+    color: var(--muted);
+}
+
+dialog.dialog pre.diff {
+    max-height: 60vh;
+    overflow: auto;
+    white-space: pre;
+    word-break: normal;
+}
+
+.assistantfooter {
+    padding: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.assistantfooter > button {
+    width: 100%;
+}
+
+.assistantfooter textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.assistantactions {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.assistantactions .hint {
+    flex: 1;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+dialog.dialog .buttons.start {
+    justify-content: flex-start;
+    margin-top: 6px;
+}
+
+dialog.dialog h4 {
+    margin: 16px 0 4px;
+}
+
+dialog.dialog input[type=number],
+dialog.dialog input[type=password] {
+    width: 100%;
+    margin: 4px 0;
+}
+
+dialog.dialog .status.ok {
+    color: var(--added);
+}
+
+dialog.dialog .status.warning {
+    color: var(--modified);
+}
+
 @media (max-width: 700px) {
-    body {
-        grid-template-columns: 0 minmax(0, 1fr);
+    body,
+    body.assistant-hidden,
+    body.sidebar-hidden {
+        grid-template-columns: 0 minmax(0, 1fr) 0;
+    }
+
+    body:not(.assistant-hidden) .assistant {
+        position: fixed;
+        top: 44px;
+        bottom: 28px;
+        right: 0;
+        width: min(420px, 100vw);
+        z-index: 50;
     }
 
     body.sidebar-open #sidebar {

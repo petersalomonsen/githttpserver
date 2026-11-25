@@ -88,6 +88,35 @@ export async function signOut() {
     }
 }
 
+/** The wallet connected through near-connect, or null. */
+export async function connectedWallet() {
+    const nc = await connector();
+    try {
+        return await nc.wallet();
+    } catch (e) {
+        return null;
+    }
+}
+
+/** Open the wallet selector and connect one. */
+export async function connectWallet() {
+    const nc = await connector();
+    return await nc.connect();
+}
+
+/**
+ * NEP-413 signMessage with the connected wallet.
+ * @returns {Promise<{accountId: string, publicKey: string, signature: string}>}
+ */
+export async function signMessage({ message, recipient, nonce }) {
+    const wallet = await connectedWallet();
+    if (!wallet) throw new Error('No wallet connected');
+    if (typeof wallet.signMessage !== 'function') {
+        throw new Error(`${wallet.manifest?.name ?? 'This wallet'} cannot sign messages`);
+    }
+    return await wallet.signMessage({ message, recipient, nonce });
+}
+
 /** A fresh access token for the git server, or null when signed out. */
 export async function createAccessToken() {
     const key = storedKey();
